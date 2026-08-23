@@ -6,6 +6,8 @@ public class SaveManager : MonoBehaviour
     public void Awake()
     {
         GameProgress progress = SaveManager.Load();
+
+
         /* Check rovers */
         if (progress.Rovers.Count == 0)
         {
