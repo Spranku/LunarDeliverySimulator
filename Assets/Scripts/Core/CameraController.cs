@@ -6,24 +6,39 @@ public class CameraController : MonoBehaviour
     public Transform target;
     public float distance = 8f;
 
+    [Header("Start Auto Swipe")]
+    public bool playStartSwipe = true;
+    public Vector2 startSwipeDelta = new Vector2(300f, -50f);
+    public float startSwipeInertiaMultiplier = 0.8f;
+
+    [Header("Start Auto Zoom")]
+    public bool playStartZoom = true;
+    public float startZoomFrom = 5f;
+    public float startZoomTo = 10f;
+    public float startZoomInertiaMultiplier = 0.3f;
+
+    private Vector2 startSwipeVelocity = Vector2.zero;
+    private float startZoomVelocity = 0f;
+    private bool isStartZoomActive = false;
+
     [Header("Rotation")]
     public float rotationSpeed = 2f;
     private float currentX = 0f;
     private float currentY = 20f;
 
     [Header("Inertia Rotation")]
-    public float inertiaDuration = 1.5f;        /* Time of end*/
-    public float inertiaMultiplier = 0.5f;      /* Multiplier */
-    private Vector2 velocity = Vector2.zero;    /* Current rotation speed */
+    public float inertiaDuration = 1.5f;
+    public float inertiaMultiplier = 0.5f;
+    private Vector2 velocity = Vector2.zero;
     private bool isDragging = false;
     private Vector2 lastMousePosition;
 
     [Header("Inertia Zoom")]
-    public float zoomInertiaDuration = 1f;          /* Time of end */
-    public float zoomInertiaMultiplier = 0.3f;      /* Multiplier */
-    public float zoomSmoothSpeed = 0.1f;            /* Smoothing speed */
-    private float zoomVelocity = 0f;                /* Current zoom speed */
-    private float targetDistance = 8f;              /* Target distance for smoothing */
+    public float zoomInertiaDuration = 1f;
+    public float zoomInertiaMultiplier = 0.3f;
+    public float zoomSmoothSpeed = 0.1f;
+    private float zoomVelocity = 0f;
+    private float targetDistance = 8f;
     private bool isZooming = false;
 
     [Header("Zoom")]
@@ -42,19 +57,81 @@ public class CameraController : MonoBehaviour
         if (target == null)
             Debug.LogWarning("Target not set!");
 
-        targetDistance = distance; /* Init target distance */
+        targetDistance = distance;
+
+        /* ===== START SWIPE ===== */
+        if (playStartSwipe)
+        {
+            /* Calculate rotation delta from swipe */
+            float deltaX = startSwipeDelta.x * rotationSpeed * sensitivity * 0.01f;
+            float deltaY = -startSwipeDelta.y * rotationSpeed * sensitivity * 0.01f;
+
+            /* Apply rotation immediately */
+            currentX += deltaX;
+            currentY += deltaY;
+            currentY = Mathf.Clamp(currentY, -80f, 80f);
+
+            /* Set rotation inertia velocity */
+            startSwipeVelocity = new Vector2(
+                startSwipeDelta.x * 0.01f * startSwipeInertiaMultiplier,
+                startSwipeDelta.y * 0.01f * startSwipeInertiaMultiplier
+            );
+            velocity = startSwipeVelocity;
+
+            Debug.Log($"Swipe applied! Rotation: ({currentX}, {currentY})");
+        }
+
+        /* ===== START ZOOM ===== */
+        if (playStartZoom)
+        {
+            /* Start from startZoomFrom */
+            distance = startZoomFrom;
+            targetDistance = startZoomFrom;
+
+            /* Set velocity to move from startZoomFrom to startZoomTo */
+            startZoomVelocity = (startZoomTo - startZoomFrom) * 0.5f * startZoomInertiaMultiplier;
+            isStartZoomActive = true;
+
+            Debug.Log($"Zoom started! From: {startZoomFrom}, To: {startZoomTo}, Velocity: {startZoomVelocity}");
+        }
+
+        UpdateCameraPosition();
+        Debug.Log("Start animation complete! Both swipe and zoom applied simultaneously!");
     }
 
     void Update()
     {
         if (target == null) return;
 
+        /* ===== START ZOOM WITH INERTIA ===== */
+        if (isStartZoomActive && Mathf.Abs(startZoomVelocity) > 0.001f)
+        {
+            /* Decrease velocity */
+            startZoomVelocity = Mathf.Lerp(startZoomVelocity, 0f, Time.deltaTime / zoomInertiaDuration);
+
+            if (Mathf.Abs(startZoomVelocity) < 0.001f)
+            {
+                startZoomVelocity = 0f;
+                isStartZoomActive = false;
+                Debug.Log("Zoom inertia finished!");
+            }
+
+            /* Apply zoom */
+            targetDistance += startZoomVelocity * Time.deltaTime * 10f;
+            targetDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
+            distance = Mathf.Lerp(distance, targetDistance, zoomSmoothSpeed);
+
+            Debug.Log($"Zoom: distance = {distance}, targetDistance = {targetDistance}, velocity = {startZoomVelocity}");
+        }
+
+        /* ===== NORMAL INPUT ===== */
+
         /* Mouse */
         if (Input.GetMouseButtonDown(0))
         {
             isDragging = true;
             lastMousePosition = Input.mousePosition;
-            velocity = Vector2.zero; /* Reset velocity */
+            velocity = Vector2.zero;
         }
 
         if (Input.GetMouseButtonUp(0))
@@ -67,7 +144,6 @@ public class CameraController : MonoBehaviour
             var delta = (Vector2)Input.mousePosition - lastMousePosition;
             lastMousePosition = Input.mousePosition;
 
-            /* Save velocity */
             velocity = delta * rotationSpeed * sensitivity * 0.1f;
 
             currentX += delta.x * rotationSpeed * sensitivity;
@@ -75,24 +151,20 @@ public class CameraController : MonoBehaviour
             currentY = Mathf.Clamp(currentY, -80f, 80f);
         }
 
-        /* Inertion rotation (after end touch)*/
+        /* Inertion rotation */
         if (!isDragging)
         {
-            /* Easy decrement velocity */
             velocity = Vector2.Lerp(velocity, Vector2.zero, Time.deltaTime / inertiaDuration);
 
-            /* If velocity is very low - stop */
             if (velocity.magnitude < 0.001f)
                 velocity = Vector2.zero;
 
-            /* Attempt inertion */
             currentX += velocity.x * inertiaMultiplier;
             currentY += velocity.y * inertiaMultiplier;
             currentY = Mathf.Clamp(currentY, -80f, 80f);
         }
 
-        /* Fingers (mobile)
-         One finger - rotation with inertion */
+        /* Fingers (mobile) */
         if (Input.touchCount == 1)
         {
             var touch = Input.GetTouch(0);
@@ -131,7 +203,6 @@ public class CameraController : MonoBehaviour
 
             float deltaDistance = currentDistance - prevDistance;
 
-            /* Save zoom velocity */
             zoomVelocity = -deltaDistance * zoomSpeed * 0.01f;
 
             targetDistance += deltaDistance * zoomSpeed * 0.01f;
@@ -144,17 +215,14 @@ public class CameraController : MonoBehaviour
             isZooming = false;
         }
 
-        /* Inertion zoom (after two fingers release) */
+        /* Inertion zoom */
         if (!isZooming && Mathf.Abs(zoomVelocity) > 0.001f)
         {
-            /* Easy decrement zoom velocity */
             zoomVelocity = Mathf.Lerp(zoomVelocity, 0f, Time.deltaTime / zoomInertiaDuration);
 
-            /* If velocity is very low - stop */
             if (Mathf.Abs(zoomVelocity) < 0.001f)
                 zoomVelocity = 0f;
 
-            /* Attempt inertion zoom */
             targetDistance -= zoomVelocity * zoomInertiaMultiplier;
             targetDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
         }
@@ -163,17 +231,15 @@ public class CameraController : MonoBehaviour
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll != 0)
         {
-            /* Save zoom velocity */
             zoomVelocity = scroll * zoomSpeed;
 
             targetDistance += scroll * zoomSpeed;
             targetDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
         }
 
-        /* Smooth zoom (eliminate jerking) */
+        /* Smooth zoom */
         distance = Mathf.Lerp(distance, targetDistance, zoomSmoothSpeed);
 
-        /* Camera update */
         UpdateCameraPosition();
     }
 

@@ -271,6 +271,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   target: {fileID: 278139037}
   distance: 8
+  playStartSwipe: 1
+  startSwipeDelta: {x: 5, y: 0}
+  startSwipeInertiaMultiplier: 0.5
+  playStartZoom: 1
+  startZoomFrom: 5
+  startZoomTo: 9.9
+  startZoomInertiaMultiplier: 1
   rotationSpeed: 1
   inertiaDuration: 1.5
   inertiaMultiplier: 3
@@ -279,8 +286,8 @@ MonoBehaviour:
   zoomSmoothSpeed: 0.5
   minDistance: 1.8
   maxDistance: 10
-  zoomSpeed: 2
-  sensitivity: 0.2
+  zoomSpeed: 1.5
+  sensitivity: 0.15
 --- !u!1 &278139033
 GameObject:
   m_ObjectHideFlags: 0
