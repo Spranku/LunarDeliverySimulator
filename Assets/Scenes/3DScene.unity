@@ -272,10 +272,15 @@ MonoBehaviour:
   target: {fileID: 278139037}
   distance: 8
   rotationSpeed: 1
+  inertiaDuration: 1.5
+  inertiaMultiplier: 3
+  zoomInertiaDuration: 0.2
+  zoomInertiaMultiplier: 0.1
+  zoomSmoothSpeed: 0.5
   minDistance: 1.8
   maxDistance: 10
   zoomSpeed: 2
-  sensitivity: 0.5
+  sensitivity: 0.2
 --- !u!1 &278139033
 GameObject:
   m_ObjectHideFlags: 0
