@@ -32,7 +32,7 @@ public class OrderData
         IsCompleted = false;
         IsFailed = false;
         DayCreated = dayCreated;
-        DayDeadline = dayCreated + urgency /* if level of order high - deadline is less */ 
+        DayDeadline = dayCreated + urgency; /* if level of order high - deadline is less */ 
     }
 
     /* Check dedaline */
