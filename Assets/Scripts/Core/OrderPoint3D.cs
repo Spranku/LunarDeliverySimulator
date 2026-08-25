@@ -106,16 +106,16 @@ public class OrderPoint3D : MonoBehaviour
 
     void OnMouseDown()
     {
-        GameManager3D gm = FindFirstObjectByType<GameManager3D>();
+        var gm = FindFirstObjectByType<GameManager3D>();
         if (gm != null)
         {
             gm.SelectOrder(Order);
         }
 
-        /* Focus camera on this point */
-        if (cameraController != null)
+        var cam = FindFirstObjectByType<CameraController>();
+        if (cam != null)
         {
-            cameraController.FocusOnPoint(transform);
+            cam.FocusOnPoint(transform); 
         }
     }
 
