@@ -10,7 +10,7 @@ public class OrderPoint3D : MonoBehaviour
     public float alpha = 0.6f;
 
     [Header("Position")]
-    public float surfaceOffset = 0.3f;             /* Offset above moon surface */
+    public float surfaceOffset = 0.3f;
 
     [Header("Scale by Distance")]
     public float scaleAtMaxDistance = 0.2f;
@@ -18,7 +18,6 @@ public class OrderPoint3D : MonoBehaviour
     public float maxDistanceForScale = 10f;
     public float minDistanceForScale = 1.8f;
 
-    private Vector3 baseScale;
     private CameraController cameraController;
 
     void Awake()
@@ -31,8 +30,6 @@ public class OrderPoint3D : MonoBehaviour
 
         sphereCollider.radius = 0.2f;
         sphereCollider.isTrigger = true;
-
-        baseScale = transform.localScale;
 
         if (myRenderer != null)
         {
@@ -56,19 +53,13 @@ public class OrderPoint3D : MonoBehaviour
     {
         Order = order;
 
-        /* Random direction on sphere surface */
         Vector3 direction = Random.onUnitSphere;
-
-        /* Calculate radius from moon scale */
         float moonRadius = moonSurface.localScale.x * 0.5f;
-
-        /* Position on surface + offset */
         Vector3 worldPosition = moonSurface.position + direction * (moonRadius + surfaceOffset);
 
         transform.position = worldPosition;
         transform.rotation = Quaternion.LookRotation(direction);
 
-        /* Color of zone with alpha */
         if (myRenderer != null && myRenderer.material != null)
         {
             Color color = Color.white;
@@ -85,13 +76,11 @@ public class OrderPoint3D : MonoBehaviour
             myRenderer.material.color = color;
         }
 
-        /* Apply initial scale */
         UpdateScale(10f);
     }
 
     void Update()
     {
-        /* Update scale based on camera distance */
         if (cameraController != null)
         {
             UpdateScale(cameraController.distance);
@@ -121,6 +110,12 @@ public class OrderPoint3D : MonoBehaviour
         if (gm != null)
         {
             gm.SelectOrder(Order);
+        }
+
+        /* Focus camera on this point */
+        if (cameraController != null)
+        {
+            cameraController.FocusOnPoint(transform);
         }
     }
 

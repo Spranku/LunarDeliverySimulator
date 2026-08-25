@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class MoonRotator : MonoBehaviour
 {
-    [Header("Rotation Settings")]
+    [Header("Rotation")]
     public float rotationSpeed = 1f;
     public bool autoRotate = true;
 

@@ -6,6 +6,15 @@ public class CameraController : MonoBehaviour
     public Transform target;
     public float distance = 8f;
 
+    [Header("Focus")]
+    public float focusDistance = 2f;
+    public float focusLerpSpeed = 3f;
+    private Transform focusTarget = null;
+    private bool isFocusing = false;
+    private Vector3 focusTargetPosition;
+    private float focusStartTime = 0f;
+    private bool focusJustActivated = false;
+
     [Header("Start Auto Swipe")]
     public bool playStartSwipe = true;
     public Vector2 startSwipeDelta = new Vector2(300f, -50f);
@@ -27,10 +36,10 @@ public class CameraController : MonoBehaviour
     private float currentY = 20f;
 
     [Header("Sensitivity (Zoom Dependent)")]
-    public float sensitivityAtMaxDistance = 0.15f;   /* Sensitivity at max zoom out (distance = 10) */
-    public float sensitivityAtMinDistance = 0.005f;  /* Sensitivity at max zoom in (distance = 1.8) */
-    public float maxDistanceForSensitivity = 10f;    /* Distance where sensitivity = sensitivityAtMaxDistance */
-    public float minDistanceForSensitivity = 1.8f;   /* Distance where sensitivity = sensitivityAtMinDistance */
+    public float sensitivityAtMaxDistance = 0.15f;
+    public float sensitivityAtMinDistance = 0.005f;
+    public float maxDistanceForSensitivity = 10f;
+    public float minDistanceForSensitivity = 1.8f;
 
     [Header("Inertia Rotation")]
     public float inertiaDuration = 1.5f;
@@ -62,7 +71,6 @@ public class CameraController : MonoBehaviour
 
         targetDistance = distance;
 
-        /* ===== START SWIPE ===== */
         if (playStartSwipe)
         {
             float sensitivity = GetCurrentSensitivity();
@@ -83,7 +91,6 @@ public class CameraController : MonoBehaviour
             Debug.Log($"Swipe applied! Rotation: ({currentX}, {currentY})");
         }
 
-        /* ===== START ZOOM ===== */
         if (playStartZoom)
         {
             distance = startZoomFrom;
@@ -118,8 +125,48 @@ public class CameraController : MonoBehaviour
             targetDistance += startZoomVelocity * Time.deltaTime * 10f;
             targetDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
             distance = Mathf.Lerp(distance, targetDistance, zoomSmoothSpeed);
+        }
 
-            Debug.Log($"Zoom: distance = {distance}, targetDistance = {targetDistance}, velocity = {startZoomVelocity}");
+        /* ===== FOCUS MODE ===== */
+        if (isFocusing && focusTarget != null)
+        {
+            /* Update target position (point moves with moon) */
+            focusTargetPosition = focusTarget.position;
+
+            /* Calculate vector from moon center to the point */
+            Vector3 moonToPoint = focusTargetPosition - target.position;
+            Vector3 directionFromMoon = moonToPoint.normalized;
+
+            /* Position camera: from point outward from moon */
+            Vector3 desiredPosition = focusTargetPosition + directionFromMoon * focusDistance;
+
+            /* Smoothly move camera */
+            transform.position = Vector3.Lerp(transform.position, desiredPosition, Time.deltaTime * focusLerpSpeed);
+
+            /* Look at focus point */
+            transform.LookAt(focusTargetPosition);
+
+            /* Update distance */
+            distance = Vector3.Distance(transform.position, focusTargetPosition);
+
+            /* Cancel focus on any input (with delay protection) */
+            if (!focusJustActivated)
+            {
+                if (Input.GetMouseButtonDown(0) || Input.touchCount > 0)
+                {
+                    ExitFocusMode();
+                }
+            }
+            else
+            {
+                /* Reset flag after 0.5 seconds */
+                if (Time.time - focusStartTime > 0.5f)
+                {
+                    focusJustActivated = false;
+                }
+            }
+
+            return;
         }
 
         /* ===== NORMAL INPUT ===== */
@@ -247,6 +294,9 @@ public class CameraController : MonoBehaviour
     {
         if (target == null) return;
 
+        /* If in focus mode, don't use this */
+        if (isFocusing) return;
+
         var rotation = Quaternion.Euler(currentY, currentX, 0);
         var position = target.position - rotation * Vector3.forward * distance;
 
@@ -254,18 +304,53 @@ public class CameraController : MonoBehaviour
         transform.LookAt(target.position);
     }
 
-    /* Calculate sensitivity based on current distance */
     float GetCurrentSensitivity()
     {
-        /* Clamp distance for sensitivity calculation */
         float clampedDistance = Mathf.Clamp(distance, minDistanceForSensitivity, maxDistanceForSensitivity);
-
-        /* Normalize distance between 0 and 1 */
         float t = (clampedDistance - minDistanceForSensitivity) / (maxDistanceForSensitivity - minDistanceForSensitivity);
+        return Mathf.Lerp(sensitivityAtMinDistance, sensitivityAtMaxDistance, t);
+    }
 
-        /* Lerp between min and max sensitivity */
-        float sensitivity = Mathf.Lerp(sensitivityAtMinDistance, sensitivityAtMaxDistance, t);
+    /* ===== FOCUS METHODS ===== */
+    public void FocusOnPoint(Transform point)
+    {
+        if (point == null) return;
 
-        return sensitivity;
+        focusTarget = point;
+        focusTargetPosition = point.position;
+        isFocusing = true;
+        focusJustActivated = true;
+        focusStartTime = Time.time;
+
+        /* Disable auto rotation while focusing */
+        MoonRotator rotator = target?.GetComponent<MoonRotator>();
+        if (rotator != null)
+            rotator.autoRotate = false;
+
+        Debug.Log($"Focus on point: {point.name}");
+    }
+
+    public void ExitFocusMode()
+    {
+        if (!isFocusing) return;
+
+        isFocusing = false;
+        focusTarget = null;
+        focusJustActivated = false;
+
+        /* Re-enable auto rotation */
+        MoonRotator rotator = target?.GetComponent<MoonRotator>();
+        if (rotator != null)
+            rotator.autoRotate = true;
+
+        /* Reset distance to normal */
+        targetDistance = Mathf.Clamp(distance, minDistance, maxDistance);
+
+        Debug.Log("Exit focus mode");
+    }
+
+    public bool IsFocusing()
+    {
+        return isFocusing;
     }
 }
