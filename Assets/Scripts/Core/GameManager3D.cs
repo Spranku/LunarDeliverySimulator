@@ -18,15 +18,15 @@ public class GameManager3D : MonoBehaviour
 
     void Awake()
     {
-        /* Создаем новый прогресс (без загрузки) */
+        /* Create test progress */
         Progress = new GameProgress();
 
-        /* Создаем тестовых роверов */
+        /* Create rovers */
         Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
         Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
         Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
 
-        /* Создаем тестовые заказы */
+        /* Create test orders */
         if (Progress.Orders.Count == 0)
         {
             GenerateOrders(5);
@@ -80,7 +80,7 @@ public class GameManager3D : MonoBehaviour
 
     public void SelectOrder(OrderData order)
     {
-        Debug.Log($"Выбран заказ: {order.Title}");
+        Debug.Log($"Choiced order: {order.Title}");
 
         if (orderPanel != null)
         {
@@ -88,7 +88,7 @@ public class GameManager3D : MonoBehaviour
         }
         else
         {
-            Debug.LogError("OrderPanel не назначен в GameManager3D!");
+            Debug.LogError("OrderPanel not set in GameManager3D!");
         }
     }
 
@@ -103,10 +103,22 @@ public class GameManager3D : MonoBehaviour
 
         Progress.TotalDeliveriesCompleted++;
 
-        /* Удаляем точку заказа с карты */
         UpdateOrderVisuals();
 
-        Debug.Log($"✅ Доставка завершена! +{order.Reward} кредитов");
+        SaveManager.Save(Progress);
+
+        /* Force exit focus, unlock camera */
+        var cam = FindFirstObjectByType<CameraController>();
+        if (cam != null)
+        {
+            if (cam.IsFocusing())
+            {
+                cam.ExitFocusMode();
+            }
+            cam.isUIActive = false;
+        }
+
+        Debug.Log($"Delivery finished! +{order.Reward} credits");
     }
 
     void UpdateOrderVisuals()

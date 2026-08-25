@@ -21,11 +21,13 @@ public class OrderPanelUI : MonoBehaviour
     private OrderData currentOrder;
     private RoverData selectedRover;
     private GameManager3D gameManager;
+    private CameraController cameraController;
     private List<GameObject> roverButtons = new List<GameObject>();
 
     void Start()
     {
         gameManager = FindFirstObjectByType<GameManager3D>();
+        cameraController = FindFirstObjectByType<CameraController>();
 
         if (closeButton != null)
             closeButton.onClick.AddListener(ClosePanel);
@@ -35,6 +37,8 @@ public class OrderPanelUI : MonoBehaviour
 
         if (panel != null)
             panel.SetActive(false);
+
+        Debug.Log($"Close button: {closeButton != null}, Deliver button: {deliverButton != null}");
     }
 
     public void ShowOrder(OrderData order)
@@ -48,6 +52,10 @@ public class OrderPanelUI : MonoBehaviour
         currentOrder = order;
         selectedRover = null;
         panel.SetActive(true);
+
+        /* БЛОКИРУЕМ КАМЕРУ */
+        if (cameraController != null)
+            cameraController.isUIActive = true;
 
         /* Load info */
         if (titleText != null)
@@ -81,14 +89,14 @@ public class OrderPanelUI : MonoBehaviour
 
     void RefreshRoversList()
     {
-        /* Удаляем старые кнопки */
+        /* Delet old buttons */
         foreach (var btn in roverButtons)
         {
             if (btn != null) Destroy(btn);
         }
         roverButtons.Clear();
 
-        /* Очищаем контейнер */
+        /* Clear container */
         if (roversListParent != null)
         {
             foreach (Transform child in roversListParent)
@@ -152,7 +160,7 @@ public class OrderPanelUI : MonoBehaviour
             deliverButton.interactable = canDeliver;
 
         /* Show error */
-        if (!canDeliver && infoText != null)
+        if (!canDeliver && infoText != null && currentOrder != null)
         {
             string reason = "";
             if (rover.IsBusy) reason = "Rover busy!";
@@ -177,16 +185,30 @@ public class OrderPanelUI : MonoBehaviour
             gameManager.StartDelivery(selectedRover, currentOrder);
         }
 
+        /* Close panel, unlock cam */
         ClosePanel();
     }
 
     void ClosePanel()
     {
+        Debug.Log("Close panel");
         if (panel != null)
             panel.SetActive(false);
 
+        /* Unlock cam */
+        if (cameraController != null)
+        {
+            cameraController.isUIActive = false;
+            Debug.Log("Camera unlocked!");
+        }
+
         currentOrder = null;
         selectedRover = null;
+    }
+
+    public bool IsPanelOpen()
+    {
+        return panel != null && panel.activeSelf;
     }
 
     void OnDestroy()

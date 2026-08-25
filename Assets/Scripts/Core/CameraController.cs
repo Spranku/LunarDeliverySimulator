@@ -6,6 +6,9 @@ public class CameraController : MonoBehaviour
     public Transform target;
     public float distance = 8f;
 
+    [Header("UI")]
+    public bool isUIActive = false; 
+
     [Header("Orbit Settings")]
     public float rotationSpeed = 2f;
     private float currentX = 0f;
@@ -49,9 +52,8 @@ public class CameraController : MonoBehaviour
     private Vector2 lastMousePosition;
 
     [Header("Inertia Zoom")]
-    public float zoomInertiaDuration = 1.5f; 
-    public float zoomInertiaMultiplier = 0.5f; 
-    public float zoomSmoothSpeed = 0.05f;
+    public float zoomInertiaDuration = 1.5f;
+    public float zoomInertiaMultiplier = 0.5f;
     private float zoomVelocity = 0f;
     private float targetDistance = 8f;
     private bool isZooming = false;
@@ -87,6 +89,8 @@ public class CameraController : MonoBehaviour
                 startSwipeDelta.y * 0.01f * startSwipeInertiaMultiplier
             );
             velocity = startSwipeVelocity;
+
+            Debug.Log($"Swipe applied! Rotation: ({currentX}, {currentY})");
         }
 
         if (playStartZoom)
@@ -96,9 +100,12 @@ public class CameraController : MonoBehaviour
 
             startZoomVelocity = (startZoomTo - startZoomFrom) * 0.5f * startZoomInertiaMultiplier;
             isStartZoomActive = true;
+
+            Debug.Log($"Zoom started! From: {startZoomFrom}, To: {startZoomTo}, Velocity: {startZoomVelocity}");
         }
 
         UpdateCameraPosition();
+        Debug.Log("Start animation complete!");
     }
 
     void Update()
@@ -114,11 +121,11 @@ public class CameraController : MonoBehaviour
             {
                 startZoomVelocity = 0f;
                 isStartZoomActive = false;
+                Debug.Log("Zoom inertia finished!");
             }
 
             targetDistance += startZoomVelocity * Time.deltaTime * 10f;
             targetDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
-
             distance = Mathf.Lerp(distance, targetDistance, Time.deltaTime * 2f);
         }
         else
@@ -159,13 +166,17 @@ public class CameraController : MonoBehaviour
                 currentY = Mathf.Clamp(newY, -80f, 80f);
             }
 
-            /* ¬ыход из фокуса при любом действии мыши */
-            if (!focusJustActivated)
+            /* Exit from focus only if UI is unactive */
+            if (!focusJustActivated && !isUIActive)
             {
-                if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0) || Input.touchCount > 0)
+                if (!IsPointerOverUI())
                 {
-                    ExitFocusMode();
-                    return;
+                    if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0) || Input.touchCount > 0)
+                    {
+                        Debug.Log("FOCUS: Exiting focus mode!");
+                        ExitFocusMode();
+                        return;
+                    }
                 }
             }
             else
@@ -180,6 +191,12 @@ public class CameraController : MonoBehaviour
         }
 
         /* ===== NORMAL INPUT ===== */
+        /* If UI is active - skip input */
+        if (isUIActive)
+        {
+            UpdateCameraPosition();
+            return;
+        }
 
         /* Mouse */
         if (Input.GetMouseButtonDown(0))
@@ -317,6 +334,29 @@ public class CameraController : MonoBehaviour
         return Mathf.Lerp(sensitivityAtMinDistance, sensitivityAtMaxDistance, t);
     }
 
+    bool IsPointerOverUI()
+    {
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                return true;
+        }
+
+        for (int i = 0; i < Input.touchCount; i++)
+        {
+            Touch touch = Input.GetTouch(i);
+            if (touch.phase == TouchPhase.Began || touch.phase == TouchPhase.Moved)
+            {
+                if (UnityEngine.EventSystems.EventSystem.current != null &&
+                    UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touch.fingerId))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /* ===== FOCUS METHODS ===== */
     public void FocusOnPoint(Transform point)
     {
@@ -340,22 +380,16 @@ public class CameraController : MonoBehaviour
 
         float delta = targetDist - currentDist;
 
-        if (Mathf.Abs(delta) < 0.1f)
-        {
-            return;
-        }
+        if (Mathf.Abs(delta) < 0.1f) return;
 
         targetDistance = targetDist;
         startZoomVelocity = delta * 0.5f * startZoomInertiaMultiplier;
         isStartZoomActive = true;
     }
 
-    void ExitFocusMode()
+    public void ExitFocusMode()
     {
         if (!isFocusing) return;
-
-        Debug.Log($"=== EXITING FOCUS ===");
-        Debug.Log($"Position: {transform.position}, Angles: ({currentX}, {currentY}), Distance: {distance}");
 
         Vector3 relativePos = transform.position - target.position;
         float currentDistance = relativePos.magnitude;
@@ -372,11 +406,10 @@ public class CameraController : MonoBehaviour
         focusTarget = null;
         focusJustActivated = false;
 
-        MoonRotator rotator = target?.GetComponent<MoonRotator>();
+        var rotator = target?.GetComponent<MoonRotator>();
         if (rotator != null)
             rotator.autoRotate = true;
 
-        /* Launch auto zoom  */
         StartAutoZoomOut();
     }
 
