@@ -6,6 +6,9 @@ public class OrderPoint3D : MonoBehaviour
     private SphereCollider sphereCollider;
     private Renderer myRenderer;
 
+    [Header("Visual")]
+    public float alpha = 0.6f;
+
     void Awake()
     {
         sphereCollider = GetComponent<SphereCollider>();
@@ -14,41 +17,61 @@ public class OrderPoint3D : MonoBehaviour
         if (sphereCollider == null)
             sphereCollider = gameObject.AddComponent<SphereCollider>();
 
-        sphereCollider.radius = 0.3f;
+        sphereCollider.radius = 0.2f;
+        sphereCollider.isTrigger = true;
+
+        /* Создаем Unlit/Color материал */
+        if (myRenderer != null)
+        {
+            Shader shader = Shader.Find("Unlit/Color");
+            if (shader != null)
+            {
+                Material mat = new Material(shader);
+                myRenderer.material = mat;
+                Debug.Log("Unlit/Color material created!");
+            }
+            else
+            {
+                Debug.LogError("Unlit/Color shader not found! Using Standard.");
+                Material mat = new Material(Shader.Find("Standard"));
+                myRenderer.material = mat;
+            }
+        }
     }
 
     public void Initialize(OrderData order, Transform moonSurface)
     {
         Order = order;
 
-        /* Position on the sphere */
-        Vector3 direction = new Vector3(
-            Random.Range(-1f, 1f),
-            Random.Range(-1f, 1f),
-            Random.Range(-1f, 1f)
-        ).normalized;
+        Vector3 direction = Random.onUnitSphere;
+        float moonRadius = moonSurface.localScale.x * 0.5f;
+        Vector3 worldPosition = moonSurface.position + direction * (moonRadius + 0.2f);
 
-        float radius = moonSurface.localScale.x * 0.5f;
-        transform.position = moonSurface.position + direction * (radius/* + 0.3f*/);
+        transform.position = worldPosition;
+        transform.rotation = Quaternion.LookRotation(direction);
 
-        /* Rotate to sphere */
-        transform.LookAt(moonSurface.position);
-
-        /* Color of zone */
-        if (myRenderer != null)
+        if (myRenderer != null && myRenderer.material != null)
         {
+            Color color = Color.white;
+
             switch (Order.ZoneType)
             {
-                case "Low": myRenderer.material.color = Color.green; break;
-                case "Medium": myRenderer.material.color = Color.yellow; break;
-                case "High": myRenderer.material.color = Color.red; break;
+                case "Low": color = Color.green; break;
+                case "Medium": color = Color.yellow; break;
+                case "High": color = Color.red; break;
+                default: color = Color.white; break;
             }
+
+            color.a = alpha;
+            myRenderer.material.color = color;
+
+            Debug.Log($"Color set: {color} for order {Order.Title}");
         }
     }
 
     void OnMouseDown()
     {
-        var gm = FindFirstObjectByType<GameManager3D>();
+        GameManager3D gm = FindFirstObjectByType<GameManager3D>();
         if (gm != null)
         {
             gm.SelectOrder(Order);

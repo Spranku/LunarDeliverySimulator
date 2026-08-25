@@ -26,6 +26,12 @@ public class CameraController : MonoBehaviour
     private float currentX = 0f;
     private float currentY = 20f;
 
+    [Header("Sensitivity (Zoom Dependent)")]
+    public float sensitivityAtMaxDistance = 0.15f;   /* Sensitivity at max zoom out (distance = 10) */
+    public float sensitivityAtMinDistance = 0.005f;  /* Sensitivity at max zoom in (distance = 1.8) */
+    public float maxDistanceForSensitivity = 10f;    /* Distance where sensitivity = sensitivityAtMaxDistance */
+    public float minDistanceForSensitivity = 1.8f;   /* Distance where sensitivity = sensitivityAtMinDistance */
+
     [Header("Inertia Rotation")]
     public float inertiaDuration = 1.5f;
     public float inertiaMultiplier = 0.5f;
@@ -46,9 +52,6 @@ public class CameraController : MonoBehaviour
     public float maxDistance = 15f;
     public float zoomSpeed = 2f;
 
-    [Header("Sensitivity")]
-    public float sensitivity = 0.5f;
-
     void Start()
     {
         if (target == null)
@@ -62,16 +65,15 @@ public class CameraController : MonoBehaviour
         /* ===== START SWIPE ===== */
         if (playStartSwipe)
         {
-            /* Calculate rotation delta from swipe */
+            float sensitivity = GetCurrentSensitivity();
+
             float deltaX = startSwipeDelta.x * rotationSpeed * sensitivity * 0.01f;
             float deltaY = -startSwipeDelta.y * rotationSpeed * sensitivity * 0.01f;
 
-            /* Apply rotation immediately */
             currentX += deltaX;
             currentY += deltaY;
             currentY = Mathf.Clamp(currentY, -80f, 80f);
 
-            /* Set rotation inertia velocity */
             startSwipeVelocity = new Vector2(
                 startSwipeDelta.x * 0.01f * startSwipeInertiaMultiplier,
                 startSwipeDelta.y * 0.01f * startSwipeInertiaMultiplier
@@ -84,11 +86,9 @@ public class CameraController : MonoBehaviour
         /* ===== START ZOOM ===== */
         if (playStartZoom)
         {
-            /* Start from startZoomFrom */
             distance = startZoomFrom;
             targetDistance = startZoomFrom;
 
-            /* Set velocity to move from startZoomFrom to startZoomTo */
             startZoomVelocity = (startZoomTo - startZoomFrom) * 0.5f * startZoomInertiaMultiplier;
             isStartZoomActive = true;
 
@@ -106,7 +106,6 @@ public class CameraController : MonoBehaviour
         /* ===== START ZOOM WITH INERTIA ===== */
         if (isStartZoomActive && Mathf.Abs(startZoomVelocity) > 0.001f)
         {
-            /* Decrease velocity */
             startZoomVelocity = Mathf.Lerp(startZoomVelocity, 0f, Time.deltaTime / zoomInertiaDuration);
 
             if (Mathf.Abs(startZoomVelocity) < 0.001f)
@@ -116,7 +115,6 @@ public class CameraController : MonoBehaviour
                 Debug.Log("Zoom inertia finished!");
             }
 
-            /* Apply zoom */
             targetDistance += startZoomVelocity * Time.deltaTime * 10f;
             targetDistance = Mathf.Clamp(targetDistance, minDistance, maxDistance);
             distance = Mathf.Lerp(distance, targetDistance, zoomSmoothSpeed);
@@ -144,6 +142,7 @@ public class CameraController : MonoBehaviour
             var delta = (Vector2)Input.mousePosition - lastMousePosition;
             lastMousePosition = Input.mousePosition;
 
+            float sensitivity = GetCurrentSensitivity();
             velocity = delta * rotationSpeed * sensitivity * 0.1f;
 
             currentX += delta.x * rotationSpeed * sensitivity;
@@ -177,6 +176,7 @@ public class CameraController : MonoBehaviour
             else if (touch.phase == TouchPhase.Moved)
             {
                 var delta = touch.deltaPosition;
+                float sensitivity = GetCurrentSensitivity();
                 velocity = delta * rotationSpeed * sensitivity * 0.05f;
 
                 currentX += delta.x * rotationSpeed * sensitivity * 0.1f;
@@ -252,5 +252,20 @@ public class CameraController : MonoBehaviour
 
         transform.position = position;
         transform.LookAt(target.position);
+    }
+
+    /* Calculate sensitivity based on current distance */
+    float GetCurrentSensitivity()
+    {
+        /* Clamp distance for sensitivity calculation */
+        float clampedDistance = Mathf.Clamp(distance, minDistanceForSensitivity, maxDistanceForSensitivity);
+
+        /* Normalize distance between 0 and 1 */
+        float t = (clampedDistance - minDistanceForSensitivity) / (maxDistanceForSensitivity - minDistanceForSensitivity);
+
+        /* Lerp between min and max sensitivity */
+        float sensitivity = Mathf.Lerp(sensitivityAtMinDistance, sensitivityAtMaxDistance, t);
+
+        return sensitivity;
     }
 }

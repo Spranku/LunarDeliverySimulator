@@ -19,8 +19,8 @@ public class GameManager3D : MonoBehaviour
 
         if (Progress.Rovers.Count == 0)
         {
-            Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
-            Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
+            Progress.Rovers.Add(new RoverData("Луноход-1", 100f, 50f, 1f));
+            Progress.Rovers.Add(new RoverData("Луноход-2", 80f, 30f, 1.5f));
             SaveManager.Save(Progress);
         }
 
@@ -35,7 +35,7 @@ public class GameManager3D : MonoBehaviour
 
     void GenerateOrders(int count)
     {
-        string[] titles = { "Food", "CO_2", "Machines", "Materials", "Medkits" };
+        string[] titles = { "Пайки", "Кислород", "Оборудование", "Материалы", "Медикаменты" };
         string[] zones = { "Low", "Medium", "High" };
 
         for (int i = 0; i < count; i++)
@@ -48,7 +48,7 @@ public class GameManager3D : MonoBehaviour
                 Random.Range(10f, 80f),
                 Random.Range(50, 300),
                 Random.Range(1, 5),
-                Vector2.zero, /* Useless on 3D */
+                Vector2.zero,
                 zone,
                 risk,
                 Progress.Day
@@ -68,8 +68,9 @@ public class GameManager3D : MonoBehaviour
         {
             if (!order.IsCompleted && !order.IsFailed)
             {
-                var point = Instantiate(orderPointPrefab3D);
-                var pointScript = point.GetComponent<OrderPoint3D>();
+                /* Создаем точку как ДОЧЕРНИЙ объект Луны */
+                GameObject point = Instantiate(orderPointPrefab3D, moonSurface);
+                OrderPoint3D pointScript = point.GetComponent<OrderPoint3D>();
                 pointScript.Initialize(order, moonSurface);
                 orderPoints.Add(pointScript);
             }
@@ -78,7 +79,6 @@ public class GameManager3D : MonoBehaviour
 
     public void SelectOrder(OrderData order)
     {
-        Debug.Log($"Choice order: {order.Title}");
-        // TODO: Show UI Panel
+        Debug.Log($"Выбран заказ: {order.Title}");
     }
 }

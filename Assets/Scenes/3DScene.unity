@@ -279,6 +279,10 @@ MonoBehaviour:
   startZoomTo: 9.9
   startZoomInertiaMultiplier: 1
   rotationSpeed: 1
+  sensitivityAtMaxDistance: 0.15
+  sensitivityAtMinDistance: 0.005
+  maxDistanceForSensitivity: 10
+  minDistanceForSensitivity: 1.8
   inertiaDuration: 1.5
   inertiaMultiplier: 3
   zoomInertiaDuration: 0.2
@@ -287,7 +291,6 @@ MonoBehaviour:
   minDistance: 1.8
   maxDistance: 10
   zoomSpeed: 1.5
-  sensitivity: 0.15
 --- !u!1 &278139033
 GameObject:
   m_ObjectHideFlags: 0
