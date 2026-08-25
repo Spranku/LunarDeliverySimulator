@@ -1,4 +1,4 @@
-using UnityEngine;
+п»їusing UnityEngine;
 using System.Collections.Generic;
 
 public class GameManager3D : MonoBehaviour
@@ -11,23 +11,25 @@ public class GameManager3D : MonoBehaviour
     [Header("Order Points")]
     public GameObject orderPointPrefab3D;
 
+    [Header("UI")]
+    public OrderPanelUI orderPanel;
+
     private List<OrderPoint3D> orderPoints = new List<OrderPoint3D>();
 
     void Awake()
     {
-        Progress = SaveManager.Load();
+        /* РЎРѕР·РґР°РµРј РЅРѕРІС‹Р№ РїСЂРѕРіСЂРµСЃСЃ (Р±РµР· Р·Р°РіСЂСѓР·РєРё) */
+        Progress = new GameProgress();
 
-        if (Progress.Rovers.Count == 0)
-        {
-            Progress.Rovers.Add(new RoverData("Луноход-1", 100f, 50f, 1f));
-            Progress.Rovers.Add(new RoverData("Луноход-2", 80f, 30f, 1.5f));
-            SaveManager.Save(Progress);
-        }
+        /* РЎРѕР·РґР°РµРј С‚РµСЃС‚РѕРІС‹С… СЂРѕРІРµСЂРѕРІ */
+        Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
+        Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
+        Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
 
+        /* РЎРѕР·РґР°РµРј С‚РµСЃС‚РѕРІС‹Рµ Р·Р°РєР°Р·С‹ */
         if (Progress.Orders.Count == 0)
         {
             GenerateOrders(5);
-            SaveManager.Save(Progress);
         }
 
         VisualizeOrders();
@@ -35,7 +37,7 @@ public class GameManager3D : MonoBehaviour
 
     void GenerateOrders(int count)
     {
-        string[] titles = { "Пайки", "Кислород", "Оборудование", "Материалы", "Медикаменты" };
+        string[] titles = { "Food", "CO2", "Machines", "Materials", "Medkits" };
         string[] zones = { "Low", "Medium", "High" };
 
         for (int i = 0; i < count; i++)
@@ -68,7 +70,6 @@ public class GameManager3D : MonoBehaviour
         {
             if (!order.IsCompleted && !order.IsFailed)
             {
-                /* Создаем точку как ДОЧЕРНИЙ объект Луны */
                 GameObject point = Instantiate(orderPointPrefab3D, moonSurface);
                 OrderPoint3D pointScript = point.GetComponent<OrderPoint3D>();
                 pointScript.Initialize(order, moonSurface);
@@ -79,6 +80,52 @@ public class GameManager3D : MonoBehaviour
 
     public void SelectOrder(OrderData order)
     {
-        Debug.Log($"Выбран заказ: {order.Title}");
+        Debug.Log($"Р’С‹Р±СЂР°РЅ Р·Р°РєР°Р·: {order.Title}");
+
+        if (orderPanel != null)
+        {
+            orderPanel.ShowOrder(order);
+        }
+        else
+        {
+            Debug.LogError("OrderPanel РЅРµ РЅР°Р·РЅР°С‡РµРЅ РІ GameManager3D!");
+        }
+    }
+
+    public void StartDelivery(RoverData rover, OrderData order)
+    {
+        float batteryUsed = order.Weight * 0.5f;
+        rover.UseBattery(batteryUsed);
+        rover.IsBusy = true;
+
+        Progress.AddMoney(order.Reward);
+        order.IsCompleted = true;
+
+        Progress.TotalDeliveriesCompleted++;
+
+        /* РЈРґР°Р»СЏРµРј С‚РѕС‡РєСѓ Р·Р°РєР°Р·Р° СЃ РєР°СЂС‚С‹ */
+        UpdateOrderVisuals();
+
+        Debug.Log($"вњ… Р”РѕСЃС‚Р°РІРєР° Р·Р°РІРµСЂС€РµРЅР°! +{order.Reward} РєСЂРµРґРёС‚РѕРІ");
+    }
+
+    void UpdateOrderVisuals()
+    {
+        for (int i = orderPoints.Count - 1; i >= 0; i--)
+        {
+            if (orderPoints[i] == null) continue;
+
+            OrderPoint3D point = orderPoints[i];
+            if (point != null && point.Order != null && point.Order.IsCompleted)
+            {
+                Destroy(point.gameObject);
+                orderPoints.RemoveAt(i);
+            }
+        }
+    }
+
+    public GameProgress GetProgress()
+    {
+        return Progress;
     }
 }
