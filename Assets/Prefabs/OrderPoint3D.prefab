@@ -47,6 +47,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OrderPoint3D
   alpha: 0.5
+  surfaceOffset: -0.005
+  scaleAtMaxDistance: 0.2
+  scaleAtMinDistance: 0.025
+  maxDistanceForScale: 10
+  minDistanceForScale: 2
 --- !u!33 &7836555566843610894
 MeshFilter:
   m_ObjectHideFlags: 0

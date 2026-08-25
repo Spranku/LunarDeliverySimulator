@@ -282,13 +282,13 @@ MonoBehaviour:
   sensitivityAtMaxDistance: 0.15
   sensitivityAtMinDistance: 0.005
   maxDistanceForSensitivity: 10
-  minDistanceForSensitivity: 1.8
+  minDistanceForSensitivity: 2
   inertiaDuration: 1.5
   inertiaMultiplier: 3
   zoomInertiaDuration: 0.2
   zoomInertiaMultiplier: 0.1
   zoomSmoothSpeed: 0.5
-  minDistance: 1.8
+  minDistance: 2
   maxDistance: 10
   zoomSpeed: 1.5
 --- !u!1 &278139033
