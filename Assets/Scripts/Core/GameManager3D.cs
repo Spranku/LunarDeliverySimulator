@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class GameManager3D : MonoBehaviour
@@ -11,28 +12,88 @@ public class GameManager3D : MonoBehaviour
     [Header("Order Points")]
     public GameObject orderPointPrefab3D;
 
+    [Header("Rovers")]
+    public GameObject roverPrefab; 
+    public Transform roverParent;
+
+    [Header("Base")]
+    public GameObject basePrefab;
+
     [Header("UI")]
     public OrderPanelUI orderPanel;
 
     private List<OrderPoint3D> orderPoints = new List<OrderPoint3D>();
+    private List<RoverVisual> roverVisuals = new List<RoverVisual>();
+    private BasePoint currentBase;
 
     void Awake()
     {
-        /* Create test progress */
         Progress = new GameProgress();
 
-        /* Create rovers */
         Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
         Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
         Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
 
-        /* Create test orders */
         if (Progress.Orders.Count == 0)
         {
             GenerateOrders(5);
         }
 
+        SetupBase();
         VisualizeOrders();
+        VisualizeRovers();
+    }
+
+    void SetupBase()
+    {
+        if (basePrefab == null || moonSurface == null) return;
+
+        Vector3 baseDirection = new Vector3(0, 1, 0).normalized;
+        float radius = moonSurface.localScale.x * 0.5f;
+        float offset = 0.02f;
+        Vector3 basePosition = moonSurface.position + baseDirection * (radius + offset);
+
+        GameObject baseObject = Instantiate(basePrefab, moonSurface);
+        baseObject.transform.position = basePosition;
+        baseObject.transform.LookAt(moonSurface.position);
+
+        currentBase = baseObject.GetComponent<BasePoint>();
+        if (currentBase == null)
+            currentBase = baseObject.AddComponent<BasePoint>();
+    }
+
+    void VisualizeRovers()
+    {
+        foreach (var visual in roverVisuals)
+        {
+            if (visual != null) Destroy(visual.gameObject);
+        }
+        roverVisuals.Clear();
+
+        if (currentBase == null)
+        {
+            Debug.LogError("No base found!");
+            return;
+        }
+
+        foreach (var rover in Progress.Rovers)
+        {
+            if (rover.IsDestroyed) continue;
+
+            GameObject roverGO = Instantiate(roverPrefab, roverParent);
+            RoverVisual visual = roverGO.GetComponent<RoverVisual>();
+
+            if (visual == null)
+                visual = roverGO.AddComponent<RoverVisual>();
+
+            /* Moon base - start position */
+            rover.CurrentPosition = currentBase.transform.position;
+            visual.Initialize(rover, moonSurface);
+            roverVisuals.Add(visual);
+
+            /* Hidden rover on base */
+            roverGO.SetActive(false);
+        }
     }
 
     void GenerateOrders(int count)
@@ -80,45 +141,73 @@ public class GameManager3D : MonoBehaviour
 
     public void SelectOrder(OrderData order)
     {
-        Debug.Log($"Choiced order: {order.Title}");
+        Debug.Log($"Order choiced: {order.Title}");
 
         if (orderPanel != null)
         {
             orderPanel.ShowOrder(order);
         }
-        else
-        {
-            Debug.LogError("OrderPanel not set in GameManager3D!");
-        }
     }
 
     public void StartDelivery(RoverData rover, OrderData order)
     {
+        /* Find order point */
+        OrderPoint3D targetPoint = orderPoints.Find(p => p.Order == order);
+        if (targetPoint == null)
+        {
+            Debug.LogError("Target point not found!");
+            return;
+        }
+
+        /* Find rover visual */
+        RoverVisual roverVis = roverVisuals.Find(r => r.data == rover);
+        if (roverVis == null)
+        {
+            Debug.LogError("Rover visual not found!");
+            return;
+        }
+
+        /* Battery */
         float batteryUsed = order.Weight * 0.5f;
         rover.UseBattery(batteryUsed);
         rover.IsBusy = true;
 
-        Progress.AddMoney(order.Reward);
-        order.IsCompleted = true;
-
-        Progress.TotalDeliveriesCompleted++;
-
-        UpdateOrderVisuals();
-
-        SaveManager.Save(Progress);
-
-        /* Force exit focus, unlock camera */
-        var cam = FindFirstObjectByType<CameraController>();
+        // ===== Exit focus, unlock camera =====
+        CameraController cam = FindFirstObjectByType<CameraController>();
         if (cam != null)
         {
             if (cam.IsFocusing())
             {
                 cam.ExitFocusMode();
+                Debug.Log("Force exit focus mode!");
             }
             cam.isUIActive = false;
+            Debug.Log("Camera unlocked!");
         }
 
-        Debug.Log($"Delivery finished! +{order.Reward} credits");
+        /* Show rover */
+        roverVis.gameObject.SetActive(true);
+
+        /* Bind to finish event */
+        roverVis.onDeliveryComplete = () => {
+            order.IsCompleted = true;
+            Progress.AddMoney(order.Reward);
+            Progress.TotalDeliveriesCompleted++;
+
+            UpdateOrderVisuals();
+            roverVis.gameObject.SetActive(false);
+
+            SaveManager.Save(Progress);
+
+            Debug.Log($"Delivery finished! +{order.Reward} credits");
+        };
+
+        /* Send to point */
+        roverVis.MoveTo(targetPoint.transform.position);
+
+        SaveManager.Save(Progress);
+
+        Debug.Log($"Rover {rover.Name} sender to order {order.Title}!");
     }
 
     void UpdateOrderVisuals()
@@ -134,6 +223,11 @@ public class GameManager3D : MonoBehaviour
                 orderPoints.RemoveAt(i);
             }
         }
+    }
+
+    public void RegisterBase(BasePoint basePoint)
+    {
+        currentBase = basePoint;
     }
 
     public GameProgress GetProgress()
