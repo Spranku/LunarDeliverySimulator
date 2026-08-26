@@ -17,7 +17,7 @@ public class OrderData
     public int DayCreated;           /* Day of order created */
     public int DayDeadline;          /* Deadline */
 
-    // Конструктор
+    
     public OrderData(string title, float weight, int reward, int urgency,
                      Vector2 targetPosition, string zoneType, float risk, int dayCreated)
     {

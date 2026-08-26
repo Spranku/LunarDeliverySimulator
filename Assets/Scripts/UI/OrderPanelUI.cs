@@ -4,23 +4,30 @@ using System.Collections.Generic;
 
 public class OrderPanelUI : MonoBehaviour
 {
-    [Header("References")]
-    [SerializeField] private GameObject panel;
-    [SerializeField] private Text titleText;
-    [SerializeField] private Text infoText;
-    [SerializeField] private Transform roversListParent;
-    [SerializeField] private GameObject roverButtonPrefab;
-    [SerializeField] private Button deliverButton;
-    [SerializeField] private Button closeButton;
+    [Header("Panel References")]
+    public GameObject panel;
+    public Text titleText;
+    public Text infoText;
+    public Text orderStatusText;
+    public Transform roversListParent;
+    public GameObject roverButtonPrefab;
+    public Button deliverButton;
+    public Button closeButton;
+
+    [Header("Rover Button")]
+    public Color availableColor = new Color(0.2f, 0.8f, 0.2f, 0.3f);
+    public Color unavailableColor = new Color(0.5f, 0.5f, 0.5f, 0.3f);
 
     private OrderData currentOrder;
     private RoverData selectedRover;
-    private GameManager gameManager;
+    private GameManager3D gameManager;
+    private CameraController cameraController;
     private List<GameObject> roverButtons = new List<GameObject>();
 
     void Start()
     {
-        gameManager = FindFirstObjectByType<GameManager>();
+        gameManager = FindFirstObjectByType<GameManager3D>();
+        cameraController = FindFirstObjectByType<CameraController>();
 
         if (closeButton != null)
             closeButton.onClick.AddListener(ClosePanel);
@@ -28,46 +35,68 @@ public class OrderPanelUI : MonoBehaviour
         if (deliverButton != null)
             deliverButton.onClick.AddListener(OnDeliverClicked);
 
-        panel.SetActive(false);
+        if (panel != null)
+            panel.SetActive(false);
+
+        Debug.Log($"Close button: {closeButton != null}, Deliver button: {deliverButton != null}");
     }
 
     public void ShowOrder(OrderData order)
     {
-        Debug.Log("Show order");
+        if (order == null)
+        {
+            Debug.LogError("Order is null!");
+            return;
+        }
+
         currentOrder = order;
         selectedRover = null;
-
-        // Показываем панель
         panel.SetActive(true);
 
-        // Заполняем информацию
-        titleText.text = order.Title;
-        infoText.text = $"⚖️ Вес: {order.Weight} кг\n" +
-                        $"💰 Награда: {order.Reward} кредитов\n" +
-                        $"⚠️ Риск: {order.Risk * 100:F0}%\n" +
-                        $"📍 Зона: {order.ZoneType}\n" +
-                        $"⏰ Срочность: {order.Urgency}/5";
+        /* БЛОКИРУЕМ КАМЕРУ */
+        if (cameraController != null)
+            cameraController.isUIActive = true;
 
-        // Создаем кнопки роверов
+        /* Load info */
+        if (titleText != null)
+            titleText.text = order.Title;
+
+        if (infoText != null)
+        {
+            infoText.text = $"Weight: {order.Weight:F1} kg\n" +
+                            $"Reward: {order.Reward} \n" +
+                            $"Risk: {order.Risk * 100:F0}%\n" +
+                            $"Zone: {order.ZoneType}\n" +
+                            $"Urgency: {order.Urgency}/5\n" +
+                            $"Deadline: day {order.DayDeadline}";
+        }
+
+        if (orderStatusText != null)
+        {
+            if (order.IsCompleted)
+                orderStatusText.text = "Successed";
+            else if (order.IsFailed)
+                orderStatusText.text = "Unsuccessed";
+            else
+                orderStatusText.text = "Active";
+        }
+
         RefreshRoversList();
 
-        // Блокируем кнопку доставки
-        deliverButton.interactable = false;
+        if (deliverButton != null)
+            deliverButton.interactable = false;
     }
 
     void RefreshRoversList()
     {
-        Debug.Log("RefreshRoversList вызван");
-
-        // Удаляем старые кнопки
+        /* Delet old buttons */
         foreach (var btn in roverButtons)
         {
-            if (btn != null)
-                Destroy(btn);
+            if (btn != null) Destroy(btn);
         }
         roverButtons.Clear();
 
-        // Дополнительная очистка - удаляем все дочерние объекты в RoversList
+        /* Clear container */
         if (roversListParent != null)
         {
             foreach (Transform child in roversListParent)
@@ -78,26 +107,25 @@ public class OrderPanelUI : MonoBehaviour
 
         if (gameManager == null)
         {
-            gameManager = FindFirstObjectByType<GameManager>();
-        }
-
-        if (gameManager == null)
-        {
-            Debug.LogError("GameManager не найден!");
-            return;
+            gameManager = FindFirstObjectByType<GameManager3D>();
+            if (gameManager == null) return;
         }
 
         var progress = gameManager.GetProgress();
         if (progress == null)
         {
-            Debug.LogError("Progress равен null!");
+            Debug.LogError("Progress is null!");
             return;
         }
 
+        Debug.Log($"Found {progress.Rovers.Count} rovers");
+
         foreach (var rover in progress.Rovers)
         {
+            Debug.Log($"Rover: {rover.Name}, Destroyed: {rover.IsDestroyed}, Busy: {rover.IsBusy}");
+
             if (rover.IsDestroyed) continue;
-            if (rover.IsBusy) continue; // Пропускаем занятых
+            if (rover.IsBusy) continue;
 
             GameObject btn = Instantiate(roverButtonPrefab, roversListParent);
             RoverButtonUI buttonUI = btn.GetComponent<RoverButtonUI>();
@@ -120,30 +148,29 @@ public class OrderPanelUI : MonoBehaviour
         if (rover.CurrentBattery < order.Weight * 0.5f) return false;
         if (rover.CargoCapacity < order.Weight) return false;
         if (order.Risk > 0.7f) return false;
-
         return true;
     }
 
     void OnRoverSelected(RoverData rover)
     {
         selectedRover = rover;
-
-        // Проверяем может ли доставить
         bool canDeliver = CanRoverDeliver(rover, currentOrder);
-        deliverButton.interactable = canDeliver;
 
-        // Показываем причину если нельзя
-        if (!canDeliver)
+        if (deliverButton != null)
+            deliverButton.interactable = canDeliver;
+
+        /* Show error */
+        if (!canDeliver && infoText != null && currentOrder != null)
         {
             string reason = "";
-            if (rover.IsBusy) reason = "Ровер занят!";
-            else if (rover.IsDestroyed) reason = "Ровер сломан!";
+            if (rover.IsBusy) reason = "Rover busy!";
+            else if (rover.IsDestroyed) reason = "Rover broken!";
             else if (rover.CurrentBattery < currentOrder.Weight * 0.5f)
-                reason = $"Не хватает батареи! (нужно: {currentOrder.Weight * 0.5f:F0})";
+                reason = $"Low battery! (needs: {currentOrder.Weight * 0.5f:F0})";
             else if (rover.CargoCapacity < currentOrder.Weight)
-                reason = $"Слишком тяжело! (грузоподъемность: {rover.CargoCapacity} кг)";
+                reason = $"Too hard! (max: {rover.CargoCapacity} kg)";
             else if (currentOrder.Risk > 0.7f)
-                reason = "Слишком опасно! (риск > 70%)";
+                reason = "Too dangerous! (risk > 70%)";
 
             infoText.text += $"\n\n❌ {reason}";
         }
@@ -153,19 +180,43 @@ public class OrderPanelUI : MonoBehaviour
     {
         if (currentOrder == null || selectedRover == null) return;
 
-        // Запускаем доставку через GameManager
         if (gameManager != null)
         {
             gameManager.StartDelivery(selectedRover, currentOrder);
         }
 
+        /* Close panel, unlock cam */
         ClosePanel();
     }
 
     void ClosePanel()
     {
-        panel.SetActive(false);
+        Debug.Log("Close panel");
+        if (panel != null)
+            panel.SetActive(false);
+
+        /* Unlock cam */
+        if (cameraController != null)
+        {
+            cameraController.isUIActive = false;
+            Debug.Log("Camera unlocked!");
+        }
+
         currentOrder = null;
         selectedRover = null;
+    }
+
+    public bool IsPanelOpen()
+    {
+        return panel != null && panel.activeSelf;
+    }
+
+    void OnDestroy()
+    {
+        if (closeButton != null)
+            closeButton.onClick.RemoveListener(ClosePanel);
+
+        if (deliverButton != null)
+            deliverButton.onClick.RemoveListener(OnDeliverClicked);
     }
 }
