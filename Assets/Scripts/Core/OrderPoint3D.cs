@@ -28,12 +28,12 @@ public class OrderPoint3D : MonoBehaviour
         if (sphereCollider == null)
             sphereCollider = gameObject.AddComponent<SphereCollider>();
 
-        sphereCollider.radius = 0.2f;
+        sphereCollider.radius = 0.5f;
         sphereCollider.isTrigger = true;
 
         if (myRenderer != null)
         {
-            Shader shader = Shader.Find("Unlit/Color");
+            var shader = Shader.Find("Unlit/Color");
             if (shader != null)
             {
                 Material mat = new Material(shader);
