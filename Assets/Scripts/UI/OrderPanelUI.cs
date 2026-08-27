@@ -1,11 +1,16 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using System.Collections.Generic;
 
 public class OrderPanelUI : MonoBehaviour
 {
     [Header("Panel References")]
     public GameObject panel;
+    public GameObject overlay;
+    public float animationDuration = 0.3f;
+
+    [Header("Content")]
     public Text titleText;
     public Text infoText;
     public Text orderStatusText;
@@ -22,12 +27,34 @@ public class OrderPanelUI : MonoBehaviour
     private RoverData selectedRover;
     private GameManager3D gameManager;
     private CameraController cameraController;
+    private HUDManager hudManager;
     private List<GameObject> roverButtons = new List<GameObject>();
+
+    private RectTransform panelRect;
+    private Vector2 closedPos;
+    private Vector2 openPos;
+    private Coroutine animCoroutine;
+    private bool isOpen = false;
+    private float openTime = 0f;
 
     void Start()
     {
         gameManager = FindFirstObjectByType<GameManager3D>();
         cameraController = FindFirstObjectByType<CameraController>();
+        hudManager = FindFirstObjectByType<HUDManager>();
+
+        if (panel != null)
+        {
+            panelRect = panel.GetComponent<RectTransform>();
+            float width = 350f;
+            if (panelRect != null && panelRect.rect.width > 0)
+                width = panelRect.rect.width;
+
+            closedPos = new Vector2(-width, 0);
+            openPos = Vector2.zero;
+            panelRect.anchoredPosition = closedPos;
+            panel.SetActive(false);
+        }
 
         if (closeButton != null)
             closeButton.onClick.AddListener(ClosePanel);
@@ -35,9 +62,15 @@ public class OrderPanelUI : MonoBehaviour
         if (deliverButton != null)
             deliverButton.onClick.AddListener(OnDeliverClicked);
 
-        if (panel != null)
-            panel.SetActive(false);
+        isOpen = false;
+    }
 
+    void Update()
+    {
+        if (isOpen && Input.GetKeyDown(KeyCode.Escape))
+        {
+            ClosePanel();
+        }
     }
 
     public void ShowOrder(OrderData order)
@@ -49,38 +82,131 @@ public class OrderPanelUI : MonoBehaviour
 
         currentOrder = order;
         selectedRover = null;
-        panel.SetActive(true);
 
         if (cameraController != null)
             cameraController.isUIActive = true;
+
+        if (!isOpen)
+        {
+            OpenPanel();
+        }
 
         if (titleText != null)
             titleText.text = order.Title;
 
         if (infoText != null)
         {
-            infoText.text = $"Weight: {order.Weight:F1} kg\n" +
-                            $"Reward: {order.Reward} \n" +
-                            $"Risk: {order.Risk * 100:F0}%\n" +
-                            $"Zone: {order.ZoneType}\n" +
-                            $"Urgency: {order.Urgency}/5\n" +
-                            $"Deadline: day {order.DayDeadline}";
+            infoText.text = $"⚖️ Weight: {order.Weight:F1} kg\n" +
+                            $"💰 Reward: {order.Reward} credits\n" +
+                            $"⚠️ Risk: {order.Risk * 100:F0}%\n" +
+                            $"📍 Zone: {order.ZoneType}\n" +
+                            $"⏰ Urgency: {order.Urgency}/5\n" +
+                            $"📅 Deadline: day {order.DayDeadline}";
         }
 
         if (orderStatusText != null)
         {
             if (order.IsCompleted)
-                orderStatusText.text = "Successed";
+                orderStatusText.text = "✅ COMPLETED";
             else if (order.IsFailed)
-                orderStatusText.text = "Unsuccessed";
+                orderStatusText.text = "❌ FAILED";
             else
-                orderStatusText.text = "Active";
+                orderStatusText.text = "🔄 ACTIVE";
         }
 
         RefreshRoversList();
 
         if (deliverButton != null)
             deliverButton.interactable = false;
+    }
+
+    void OpenPanel()
+    {
+        if (isOpen) return;
+        isOpen = true;
+        openTime = Time.time;
+
+        if (hudManager != null)
+            hudManager.ShowOverlay();
+
+        if (panel != null)
+        {
+            panel.SetActive(true);
+            if (panelRect != null)
+            {
+                panelRect.anchoredPosition = closedPos;
+                if (animCoroutine != null) StopCoroutine(animCoroutine);
+                animCoroutine = StartCoroutine(AnimatePanel(closedPos, openPos));
+            }
+        }
+    }
+
+    public void ClosePanel()
+    {
+        if (!isOpen) return;
+
+        if (Time.time - openTime < 0.5f)
+        {
+            return;
+        }
+
+        isOpen = false;
+
+        if (cameraController != null)
+        {
+            if (cameraController.IsFocusing())
+                cameraController.ExitFocusMode();
+            cameraController.isUIActive = false;
+        }
+
+        if (panelRect != null)
+        {
+            if (animCoroutine != null) StopCoroutine(animCoroutine);
+            animCoroutine = StartCoroutine(AnimatePanel(panelRect.anchoredPosition, closedPos, true));
+        }
+        else
+        {
+            HidePanelImmediate();
+        }
+    }
+
+    IEnumerator AnimatePanel(Vector2 start, Vector2 end, bool hideOnComplete = false)
+    {
+        float elapsed = 0f;
+
+        while (elapsed < animationDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / animationDuration;
+            float smoothT = t * t * (3f - 2f * t);
+
+            if (panelRect != null)
+                panelRect.anchoredPosition = Vector2.Lerp(start, end, smoothT);
+
+            yield return null;
+        }
+
+        if (panelRect != null)
+            panelRect.anchoredPosition = end;
+
+        if (hideOnComplete)
+            HidePanelImmediate();
+
+        animCoroutine = null;
+    }
+
+    void HidePanelImmediate()
+    {
+        Debug.Log("HidePanelImmediate");
+
+        if (panel != null)
+            panel.SetActive(false);
+
+        if (hudManager != null)
+            hudManager.HideOverlay();
+
+        currentOrder = null;
+        selectedRover = null;
     }
 
     void RefreshRoversList()
@@ -106,10 +232,7 @@ public class OrderPanelUI : MonoBehaviour
         }
 
         var progress = gameManager.GetProgress();
-        if (progress == null)
-        {
-            return;
-        }
+        if (progress == null) return;
 
         foreach (var rover in progress.Rovers)
         {
@@ -156,7 +279,7 @@ public class OrderPanelUI : MonoBehaviour
             else if (rover.CurrentBattery < currentOrder.Weight * 0.5f)
                 reason = $"Low battery! (needs: {currentOrder.Weight * 0.5f:F0})";
             else if (rover.CargoCapacity < currentOrder.Weight)
-                reason = $"Too hard! (max: {rover.CargoCapacity} kg)";
+                reason = $"Too heavy! (max: {rover.CargoCapacity} kg)";
             else if (currentOrder.Risk > 0.7f)
                 reason = "Too dangerous! (risk > 70%)";
 
@@ -176,36 +299,8 @@ public class OrderPanelUI : MonoBehaviour
         ClosePanel();
     }
 
-    void ClosePanel()
-    {
-        if (panel != null)
-            panel.SetActive(false);
-
-        /* Exit focus with close panel */
-        if (cameraController != null)
-        {
-            if (cameraController.IsFocusing())
-            {
-                cameraController.ExitFocusMode();
-            }
-            cameraController.isUIActive = false;
-        }
-
-        currentOrder = null;
-        selectedRover = null;
-    }
-
     public bool IsPanelOpen()
     {
-        return panel != null && panel.activeSelf;
-    }
-
-    void OnDestroy()
-    {
-        if (closeButton != null)
-            closeButton.onClick.RemoveListener(ClosePanel);
-
-        if (deliverButton != null)
-            deliverButton.onClick.RemoveListener(OnDeliverClicked);
+        return isOpen;
     }
 }

@@ -143,11 +143,28 @@ public class GameManager3D : MonoBehaviour
 
     public void SelectOrder(OrderData order)
     {
-        Debug.Log($"Order choiced: {order.Title}");
+        Debug.Log($"Order selected: {order.Title}");
 
+        /* Focus camera on the order point */
+        OrderPoint3D targetPoint = orderPoints.Find(p => p.Order == order);
+        if (targetPoint != null)
+        {
+            CameraController cam = FindFirstObjectByType<CameraController>();
+            if (cam != null)
+            {
+                cam.FocusOnPoint(targetPoint.transform);
+            }
+        }
+
+        /* Show order panel */
         if (orderPanel != null)
         {
             orderPanel.ShowOrder(order);
+            Debug.Log("Order panel ShowOrder called!");
+        }
+        else
+        {
+            Debug.LogError("OrderPanel is not assigned in GameManager3D!");
         }
     }
 

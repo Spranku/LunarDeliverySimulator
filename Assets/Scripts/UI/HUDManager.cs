@@ -22,7 +22,7 @@ public class HUDManager : MonoBehaviour
 
     [Header("Menu")]
     public GameObject menuPanel;
-    public GameObject menuOverlay;
+    public GameObject sharedOverlay;
     public float animationDuration = 0.3f;
 
     private bool isMenuOpen = false;
@@ -31,38 +31,50 @@ public class HUDManager : MonoBehaviour
     private Vector2 menuOpenPos;
     private Coroutine animCoroutine;
 
+    private OrderPanelUI orderPanel;
+    private float overlayBlockTime = 0f;
+    private bool isOverlayClickBlocked = false;
+
     void Start()
     {
         if (gameManager == null)
             gameManager = FindFirstObjectByType<GameManager3D>();
 
+        orderPanel = FindFirstObjectByType<OrderPanelUI>();
+
         if (menuPanel != null)
         {
             menuRect = menuPanel.GetComponent<RectTransform>();
             float width = 300f;
-
             if (menuRect != null && menuRect.rect.width > 0)
                 width = menuRect.rect.width;
 
             menuClosedPos = new Vector2(-width, 0);
             menuOpenPos = Vector2.zero;
             menuRect.anchoredPosition = menuClosedPos;
-
             menuPanel.SetActive(false);
         }
 
-        /* Overlay click -> close menu */
-        if (menuOverlay != null)
+        /* Shared Overlay setup */
+        if (sharedOverlay != null)
         {
-            Button overlayBtn = menuOverlay.GetComponent<Button>();
-            if (overlayBtn == null)
-                overlayBtn = menuOverlay.AddComponent<Button>();
+            Image img = sharedOverlay.GetComponent<Image>();
+            if (img == null)
+            {
+                img = sharedOverlay.AddComponent<Image>();
+                img.color = new Color(0, 0, 0, 0);
+            }
+            img.raycastTarget = true;
 
-            overlayBtn.onClick.AddListener(CloseMenu);
-            menuOverlay.SetActive(false);
+            Button overlayBtn = sharedOverlay.GetComponent<Button>();
+            if (overlayBtn == null)
+                overlayBtn = sharedOverlay.AddComponent<Button>();
+
+            overlayBtn.onClick.RemoveAllListeners();
+            overlayBtn.onClick.AddListener(OnOverlayClick);
+            sharedOverlay.SetActive(false);
         }
 
-        /* Buttons */
         if (menuButton != null)
             menuButton.onClick.AddListener(ToggleMenu);
 
@@ -119,12 +131,69 @@ public class HUDManager : MonoBehaviour
         }
     }
 
+    /* ===== OVERLAY ===== */
+
+    void OnOverlayClick()
+    {
+        if (isOverlayClickBlocked)
+        {
+            return;
+        }
+
+        if (Time.time - overlayBlockTime < 0.3f)
+        {
+            return;
+        }
+
+        if (orderPanel != null && orderPanel.IsPanelOpen())
+        {
+            orderPanel.ClosePanel();
+            return;
+        }
+
+        if (isMenuOpen)
+        {
+            CloseMenu();
+        }
+    }
+
+    public void ShowOverlay()
+    {
+        if (sharedOverlay != null && !sharedOverlay.activeSelf)
+        {
+            sharedOverlay.SetActive(true);
+            overlayBlockTime = Time.time;
+            isOverlayClickBlocked = true;
+
+            StartCoroutine(UnblockOverlayAfterDelay(0.3f));
+        }
+    }
+
+    IEnumerator UnblockOverlayAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        isOverlayClickBlocked = false;
+    }
+
+    public void HideOverlay()
+    {
+        bool menuOpen = isMenuOpen;
+        bool orderOpen = orderPanel != null && orderPanel.IsPanelOpen();
+
+        if (!menuOpen && !orderOpen)
+        {
+            if (sharedOverlay != null && sharedOverlay.activeSelf)
+            {
+                sharedOverlay.SetActive(false);
+                isOverlayClickBlocked = false;
+            }
+        }
+    }
+
     /* ===== MENU ===== */
 
     void ToggleMenu()
     {
-        Debug.Log($"ToggleMenu: isOpen={isMenuOpen}");
-
         if (isMenuOpen)
             CloseMenu();
         else
@@ -133,26 +202,17 @@ public class HUDManager : MonoBehaviour
 
     void OpenMenu()
     {
-        if (isMenuOpen)
-        {
-            Debug.Log("OpenMenu: already open");
-            return;
-        }
-
+        if (isMenuOpen) return;
         isMenuOpen = true;
-        Debug.Log("OpenMenu: opening");
 
-        if (menuOverlay != null)
-            menuOverlay.SetActive(true);
+        ShowOverlay();
 
         if (menuPanel != null)
         {
             menuPanel.SetActive(true);
-
             if (menuRect != null)
             {
                 menuRect.anchoredPosition = menuClosedPos;
-
                 if (animCoroutine != null) StopCoroutine(animCoroutine);
                 animCoroutine = StartCoroutine(AnimateMenu(menuClosedPos, menuOpenPos, false));
             }
@@ -161,13 +221,7 @@ public class HUDManager : MonoBehaviour
 
     void CloseMenu()
     {
-        if (!isMenuOpen)
-        {
-            Debug.Log("CloseMenu: already closed");
-            return;
-        }
-
-        Debug.Log("CloseMenu: closing");
+        if (!isMenuOpen) return;
         isMenuOpen = false;
 
         if (menuRect != null)
@@ -184,7 +238,6 @@ public class HUDManager : MonoBehaviour
     IEnumerator AnimateMenu(Vector2 start, Vector2 end, bool hideOnComplete = false)
     {
         float elapsed = 0f;
-        Debug.Log($"Animation: from {start} to {end}");
 
         while (elapsed < animationDuration)
         {
@@ -201,25 +254,18 @@ public class HUDManager : MonoBehaviour
         if (menuRect != null)
             menuRect.anchoredPosition = end;
 
-        Debug.Log($"Animation complete at {end}");
-
         if (hideOnComplete)
-        {
             HideMenuImmediate();
-        }
 
         animCoroutine = null;
     }
 
     void HideMenuImmediate()
     {
-        Debug.Log("HideMenuImmediate");
-
         if (menuPanel != null)
             menuPanel.SetActive(false);
 
-        if (menuOverlay != null)
-            menuOverlay.SetActive(false);
+        HideOverlay();
     }
 
     /* ===== BUTTON HANDLERS ===== */
@@ -227,24 +273,20 @@ public class HUDManager : MonoBehaviour
     void OnOrdersClick()
     {
         Debug.Log("Orders button clicked");
-        /* TODO: Show all orders list */
     }
 
     void OnStatusClick()
     {
         Debug.Log("Status button clicked");
-        /* TODO: Show rovers status panel */
     }
 
     void OnStatsClick()
     {
         Debug.Log("Stats button clicked");
-        /* TODO: Show statistics panel */
     }
 
     void OnSettingsClick()
     {
         Debug.Log("Settings button clicked");
-        /* TODO: Show settings panel */
     }
 }
