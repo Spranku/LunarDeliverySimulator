@@ -53,11 +53,9 @@ public class OrderPanelUI : MonoBehaviour
         selectedRover = null;
         panel.SetActive(true);
 
-        /* БЛОКИРУЕМ КАМЕРУ */
         if (cameraController != null)
             cameraController.isUIActive = true;
 
-        /* Load info */
         if (titleText != null)
             titleText.text = order.Title;
 
@@ -89,14 +87,12 @@ public class OrderPanelUI : MonoBehaviour
 
     void RefreshRoversList()
     {
-        /* Delet old buttons */
         foreach (var btn in roverButtons)
         {
             if (btn != null) Destroy(btn);
         }
         roverButtons.Clear();
 
-        /* Clear container */
         if (roversListParent != null)
         {
             foreach (Transform child in roversListParent)
@@ -159,7 +155,6 @@ public class OrderPanelUI : MonoBehaviour
         if (deliverButton != null)
             deliverButton.interactable = canDeliver;
 
-        /* Show error */
         if (!canDeliver && infoText != null && currentOrder != null)
         {
             string reason = "";
@@ -185,21 +180,24 @@ public class OrderPanelUI : MonoBehaviour
             gameManager.StartDelivery(selectedRover, currentOrder);
         }
 
-        /* Close panel, unlock cam */
         ClosePanel();
     }
 
     void ClosePanel()
     {
         Debug.Log("Close panel");
+
         if (panel != null)
             panel.SetActive(false);
 
-        /* Unlock cam */
+        /* Exit focus with close panel */
         if (cameraController != null)
         {
+            if (cameraController.IsFocusing())
+            {
+                cameraController.ExitFocusMode();
+            }
             cameraController.isUIActive = false;
-            Debug.Log("Camera unlocked!");
         }
 
         currentOrder = null;
