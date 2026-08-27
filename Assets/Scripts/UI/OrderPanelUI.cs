@@ -38,14 +38,12 @@ public class OrderPanelUI : MonoBehaviour
         if (panel != null)
             panel.SetActive(false);
 
-        Debug.Log($"Close button: {closeButton != null}, Deliver button: {deliverButton != null}");
     }
 
     public void ShowOrder(OrderData order)
     {
         if (order == null)
         {
-            Debug.LogError("Order is null!");
             return;
         }
 
@@ -110,16 +108,11 @@ public class OrderPanelUI : MonoBehaviour
         var progress = gameManager.GetProgress();
         if (progress == null)
         {
-            Debug.LogError("Progress is null!");
             return;
         }
 
-        Debug.Log($"Found {progress.Rovers.Count} rovers");
-
         foreach (var rover in progress.Rovers)
         {
-            Debug.Log($"Rover: {rover.Name}, Destroyed: {rover.IsDestroyed}, Busy: {rover.IsBusy}");
-
             if (rover.IsDestroyed) continue;
             if (rover.IsBusy) continue;
 
@@ -185,8 +178,6 @@ public class OrderPanelUI : MonoBehaviour
 
     void ClosePanel()
     {
-        Debug.Log("Close panel");
-
         if (panel != null)
             panel.SetActive(false);
 

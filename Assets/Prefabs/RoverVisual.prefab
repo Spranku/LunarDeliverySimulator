@@ -136,4 +136,4 @@ MonoBehaviour:
     IsDestroyed: 0
     CurrentPosition: {x: 0, y: 0}
   moonSurface: {fileID: 0}
-  moveSpeed: 0.1
+  moveSpeedMultiplier: 1
