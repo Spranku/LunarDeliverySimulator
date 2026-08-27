@@ -6,110 +6,106 @@ public class RoverVisual : MonoBehaviour
     [Header("References")]
     public RoverData data;
     public Transform moonSurface;
-    public float moveSpeed = 2f;
+    public float moveSpeed = 0.5f;
 
     private bool isMoving = false;
-    private Vector3 targetPosition;
     private Vector3 startPosition;
     private float moveProgress = 0f;
     private bool isReturning = false;
+    private Vector3 basePosition;
+    private Transform targetTransform; 
+    private Vector3 fixedTargetPosition; 
 
-    public System.Action onDeliveryComplete; 
+    public System.Action onDeliveryComplete;
 
-    public void Initialize(RoverData roverData, Transform moon)
+    public void Initialize(RoverData roverData, Transform moon, Vector3 basePos)
     {
         data = roverData;
         moonSurface = moon;
+        basePosition = basePos;
         transform.position = data.CurrentPosition;
         UpdateVisual();
     }
 
     void Update()
     {
-        if (isMoving)
+        if (!isMoving) return;
+
+        if (!isReturning && targetTransform != null)
         {
-            moveProgress += Time.deltaTime * moveSpeed;
-
-            if (moveProgress >= 1f)
-            {
-                moveProgress = 1f;
-                isMoving = false;
-                transform.position = targetPosition;
-                data.CurrentPosition = targetPosition;
-
-                if (isReturning)
-                {
-                    /* Returned */
-                    data.IsBusy = false;
-                    isReturning = false;
-                    Debug.Log($"Rover {data.Name} returned to base!");
-                }
-                else
-                {
-                    /* Return after delivery */
-                    StartCoroutine(ReturnToBase());
-                }
-                return;
-            }
-
-            float t = Mathf.SmoothStep(0f, 1f, moveProgress);
-            Vector3 pos = Vector3.Lerp(startPosition, targetPosition, t);
-
-            /* Rover on sphere */
-            Vector3 direction = (pos - moonSurface.position).normalized;
-            float radius = moonSurface.localScale.x * 0.5f + 0.1f;
-            pos = moonSurface.position + direction * radius;
-
-            transform.position = pos;
-            transform.LookAt(moonSurface.position);
+           /* Update position of order point */
+            fixedTargetPosition = targetTransform.position;
         }
+
+        moveProgress += Time.deltaTime * moveSpeed;
+
+        if (moveProgress >= 1f)
+        {
+            moveProgress = 1f;
+            isMoving = false;
+            transform.position = fixedTargetPosition;
+            data.CurrentPosition = fixedTargetPosition;
+
+            if (isReturning)
+            {
+                /* Returned to the base */
+                data.IsBusy = false;
+                isReturning = false;
+                Debug.Log($"Rover {data.Name} returned to base!");
+                onDeliveryComplete?.Invoke();
+                gameObject.SetActive(false);
+            }
+            else
+            {
+                /* Start back rover */
+                Debug.Log($"Rover {data.Name} arrived at destination, returning to base...");
+                StartCoroutine(ReturnToBase());
+            }
+            return;
+        }
+
+        float t = Mathf.SmoothStep(0f, 1f, moveProgress);
+        Vector3 pos = Vector3.Lerp(startPosition, fixedTargetPosition, t);
+
+        /* Rover on the moon surface */
+        Vector3 direction = (pos - moonSurface.position).normalized;
+        float radius = moonSurface.localScale.x * 0.5f + 0.1f;
+        pos = moonSurface.position + direction * radius;
+
+        transform.position = pos;
+        transform.LookAt(moonSurface.position);
     }
 
-    public void MoveTo(Vector3 target)
+    public void MoveTo(Transform target)
     {
         if (isMoving) return;
 
+        targetTransform = target;
+        fixedTargetPosition = target.position;
         isMoving = true;
         isReturning = false;
         startPosition = data.CurrentPosition;
-        targetPosition = target;
         moveProgress = 0f;
         data.IsBusy = true;
+        gameObject.SetActive(true);
     }
 
     IEnumerator ReturnToBase()
     {
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.3f);
 
+        targetTransform = null; 
+        fixedTargetPosition = basePosition;
+        startPosition = data.CurrentPosition;
+        moveProgress = 0f;
         isMoving = true;
         isReturning = true;
-        startPosition = data.CurrentPosition;
-        targetPosition = GetBasePosition();
-        moveProgress = 0f;
 
-        if (isReturning)
-        {
-            data.IsBusy = false;
-            isReturning = false;
-            Debug.Log($"Rover {data.Name} returned to base!");
-
-            onDeliveryComplete?.Invoke();
-        }
-    }
-
-    Vector3 GetBasePosition()
-    {
-        BasePoint basePoint = FindFirstObjectByType<BasePoint>();
-        if (basePoint != null)
-        {
-            return basePoint.transform.position;
-        }
-        return Vector3.zero;
+        Debug.Log($"Rover {data.Name} returning to base...");
     }
 
     void UpdateVisual()
     {
-        /* Change color */
         Renderer rend = GetComponent<Renderer>();
         if (rend != null)
         {

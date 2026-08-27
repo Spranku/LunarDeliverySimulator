@@ -76,6 +76,8 @@ public class GameManager3D : MonoBehaviour
             return;
         }
 
+        Vector3 basePos = currentBase.transform.position;
+
         foreach (var rover in Progress.Rovers)
         {
             if (rover.IsDestroyed) continue;
@@ -86,12 +88,12 @@ public class GameManager3D : MonoBehaviour
             if (visual == null)
                 visual = roverGO.AddComponent<RoverVisual>();
 
-            /* Moon base - start position */
-            rover.CurrentPosition = currentBase.transform.position;
-            visual.Initialize(rover, moonSurface);
+            
+            rover.CurrentPosition = basePos;
+            visual.Initialize(rover, moonSurface, basePos);
             roverVisuals.Add(visual);
 
-            /* Hidden rover on base */
+            /* Hidden rover on the moon base */
             roverGO.SetActive(false);
         }
     }
@@ -172,42 +174,29 @@ public class GameManager3D : MonoBehaviour
         rover.UseBattery(batteryUsed);
         rover.IsBusy = true;
 
-        // ===== Exit focus, unlock camera =====
+        /* Return from focus */
         CameraController cam = FindFirstObjectByType<CameraController>();
         if (cam != null)
         {
-            if (cam.IsFocusing())
-            {
-                cam.ExitFocusMode();
-                Debug.Log("Force exit focus mode!");
-            }
+            if (cam.IsFocusing()) cam.ExitFocusMode();
             cam.isUIActive = false;
-            Debug.Log("Camera unlocked!");
         }
 
-        /* Show rover */
-        roverVis.gameObject.SetActive(true);
-
-        /* Bind to finish event */
+        /* Bind event on finish delivery */
         roverVis.onDeliveryComplete = () => {
             order.IsCompleted = true;
             Progress.AddMoney(order.Reward);
             Progress.TotalDeliveriesCompleted++;
-
             UpdateOrderVisuals();
-            roverVis.gameObject.SetActive(false);
-
             SaveManager.Save(Progress);
-
-            Debug.Log($"Delivery finished! +{order.Reward} credits");
+            Debug.Log($"✅ Delivery finished ! +{order.Reward} credits");
         };
 
-        /* Send to point */
-        roverVis.MoveTo(targetPoint.transform.position);
+        /* Send rover to transform of order point  */
+        roverVis.MoveTo(targetPoint.transform);
 
         SaveManager.Save(Progress);
-
-        Debug.Log($"Rover {rover.Name} sender to order {order.Title}!");
+        Debug.Log($"🚀 Rover {rover.Name} to go to the order {order.Title}!");
     }
 
     void UpdateOrderVisuals()
