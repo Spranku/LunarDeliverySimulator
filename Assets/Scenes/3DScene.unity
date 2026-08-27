@@ -617,27 +617,28 @@ MonoBehaviour:
   target: {fileID: 278139037}
   distance: 8
   isUIActive: 0
-  rotationSpeed: 1
+  rotationSpeed: 0.5
   focusDistance: 0.5
-  focusLerpSpeed: 3
-  playStartSwipe: 1
-  startSwipeDelta: {x: 5, y: 0}
-  startSwipeInertiaMultiplier: 0.5
-  playStartZoom: 1
-  startZoomFrom: 5
-  startZoomTo: 9.9
-  startZoomInertiaMultiplier: 1
+  focusLerpSpeed: 5
   sensitivityAtMaxDistance: 0.15
   sensitivityAtMinDistance: 0.005
   maxDistanceForSensitivity: 10
   minDistanceForSensitivity: 2
   inertiaDuration: 1.5
   inertiaMultiplier: 3
-  zoomInertiaDuration: 0.2
-  zoomInertiaMultiplier: 0.1
+  inertiaStopThreshold: 0.0005
   minDistance: 2
   maxDistance: 10
   zoomSpeed: 1.5
+  zoomInertiaDuration: 0.2
+  zoomInertiaMultiplier: 0.1
+  playStartSwipe: 1
+  startSwipeDelta: {x: 100, y: 0}
+  startSwipeInertiaMultiplier: 1
+  playStartZoom: 1
+  startZoomFrom: 5
+  startZoomTo: 9.9
+  startZoomInertiaMultiplier: 1
 --- !u!1 &278139033
 GameObject:
   m_ObjectHideFlags: 0
@@ -748,7 +749,8 @@ Transform:
   m_LocalPosition: {x: 0, y: -0, z: 0}
   m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 728041591}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &278139038
@@ -924,6 +926,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 710364925}
   m_CullTransparentMesh: 1
+--- !u!1 &728041590
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 728041591}
+  m_Layer: 0
+  m_Name: Base
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &728041591
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 728041590}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.23744667, y: 0.26891667, z: -0.3482867}
+  m_LocalScale: {x: 0.33333334, y: 0.33333334, z: 0.33333334}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 278139037}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &914257108
 GameObject:
   m_ObjectHideFlags: 0
@@ -1222,6 +1255,9 @@ MonoBehaviour:
     DeliveryHistory: []
   moonSurface: {fileID: 278139037}
   orderPointPrefab3D: {fileID: 6384344738874657956, guid: 50fc6fc54376ccd46897cca937973c5a, type: 3}
+  roverPrefab: {fileID: 7456551589063529306, guid: d4e06959acf06cb4fa3cad758a1b85f7, type: 3}
+  roverParent: {fileID: 1549859635}
+  basePrefab: {fileID: 8684015264733397528, guid: 4c553cd0bd9537e44b5b031e1dd0e2b5, type: 3}
   orderPanel: {fileID: 914257110}
 --- !u!4 &1177409258
 Transform:
@@ -1324,6 +1360,37 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 100, y: 100, z: 100}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1549859634
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1549859635}
+  m_Layer: 0
+  m_Name: Rovers
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1549859635
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1549859634}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.49708, y: 0.79889, z: -1.1682}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -1636,3 +1703,4 @@ SceneRoots:
   - {fileID: 1199050264}
   - {fileID: 1730751973}
   - {fileID: 1798685126}
+  - {fileID: 1549859635}
