@@ -80,7 +80,11 @@ public class GameManager3D : MonoBehaviour
 
         foreach (var rover in Progress.Rovers)
         {
-            if (rover.IsDestroyed) continue;
+            /* ===== show destroyed rovers red color===== */
+            if (rover.IsDestroyed)
+            {
+                continue; 
+            }
 
             GameObject roverGO = Instantiate(roverPrefab, roverParent);
             RoverVisual visual = roverGO.GetComponent<RoverVisual>();
@@ -88,12 +92,9 @@ public class GameManager3D : MonoBehaviour
             if (visual == null)
                 visual = roverGO.AddComponent<RoverVisual>();
 
-            
             rover.CurrentPosition = basePos;
             visual.Initialize(rover, moonSurface, basePos);
             roverVisuals.Add(visual);
-
-            /* Hidden rover on the moon base */
             roverGO.SetActive(false);
         }
     }
@@ -192,21 +193,60 @@ public class GameManager3D : MonoBehaviour
             return;
         }
 
+        /* ===== Chance of destroy by risk ===== */
+        float riskRoll = Random.Range(0f, 1f);
+        bool isDestroyed = riskRoll < order.Risk;
+
+        if (isDestroyed)
+        {
+            Debug.Log($"💥 Rover {rover.Name} was DESTROYED in zone {order.ZoneType}! (risk: {order.Risk * 100:F0}%, roll: {riskRoll * 100:F0}%)");
+
+            /* Desotoyed rover */
+            rover.IsDestroyed = true;
+            rover.IsBusy = false;
+
+            /* Debuff by rover destroyed */
+            Progress.ChangeRating(-10f);
+            Progress.TotalDeliveriesFailed++;
+
+            if (orderPanel != null && orderPanel.IsPanelOpen())
+            {
+                orderPanel.ClosePanel();
+            }
+
+            CameraController cam = FindFirstObjectByType<CameraController>();
+            if (cam != null)
+            {
+                if (cam.IsFocusing()) cam.ExitFocusMode();
+                cam.isUIActive = false;
+            }
+
+            if (roverVis != null)
+            {
+                roverVis.gameObject.SetActive(false);
+            }
+
+            SaveManager.Save(Progress);
+            Debug.Log($"💀 Rover lost! Rating -10");
+            return;
+        }
+
+        /* ===== Rover is alive. Normal delivery ===== */
+
         /* battery */
         float batteryUsed = order.Weight * 0.5f;
         rover.UseBattery(batteryUsed);
         rover.IsBusy = true;
 
-        /* mark as complete order */
-        order.IsCompleted = true;
+        /* mark as busy */
         order.IsBusy = true;
 
         /* exit focus */
-        CameraController cam = FindFirstObjectByType<CameraController>();
-        if (cam != null)
+        CameraController cam2 = FindFirstObjectByType<CameraController>();
+        if (cam2 != null)
         {
-            if (cam.IsFocusing()) cam.ExitFocusMode();
-            cam.isUIActive = false;
+            if (cam2.IsFocusing()) cam2.ExitFocusMode();
+            cam2.isUIActive = false;
         }
 
         /* close panel */
@@ -215,7 +255,7 @@ public class GameManager3D : MonoBehaviour
             orderPanel.ClosePanel();
         }
 
-        /* ===== change color for processing order ===== */
+        /* Change color of order (gray) */
         if (targetPoint != null)
         {
             targetPoint.SetColor(Color.gray);
@@ -226,7 +266,7 @@ public class GameManager3D : MonoBehaviour
             Progress.TotalDeliveriesCompleted++;
             Progress.ChangeRating(2f);
 
-            /* ===== Delete point  ===== */
+            /* Delete order point after delivery */
             if (targetPoint != null)
             {
                 Destroy(targetPoint.gameObject);

@@ -281,7 +281,6 @@ public class OrderPanelUI : MonoBehaviour
         if (rover.IsBusy || rover.IsDestroyed) return false;
         if (rover.CurrentBattery < order.Weight * 0.5f) return false;
         if (rover.CargoCapacity < order.Weight) return false;
-        if (order.Risk > 0.7f) return false;
         return true;
     }
 
