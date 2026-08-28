@@ -77,6 +77,19 @@ public class OrderPanelUI : MonoBehaviour
     {
         if (order == null)
         {
+            Debug.LogError("Order is null!");
+            return;
+        }
+
+        /* ===== Dont show order if in progress ===== */
+        if (order.IsCompleted || order.IsBusy)
+        {
+            Debug.Log($"Order {order.Title} is already completed or in progress!");
+
+            if (IsPanelOpen())
+            {
+                ClosePanel();
+            }
             return;
         }
 
@@ -96,12 +109,12 @@ public class OrderPanelUI : MonoBehaviour
 
         if (infoText != null)
         {
-            infoText.text = $"⚖️ Weight: {order.Weight:F1} kg\n" +
-                            $"💰 Reward: {order.Reward} credits\n" +
-                            $"⚠️ Risk: {order.Risk * 100:F0}%\n" +
-                            $"📍 Zone: {order.ZoneType}\n" +
-                            $"⏰ Urgency: {order.Urgency}/5\n" +
-                            $"📅 Deadline: day {order.DayDeadline}";
+            infoText.text = $"Weight: {order.Weight:F1} kg\n" +
+                            $"Reward: {order.Reward} credits\n" +
+                            $"Risk: {order.Risk * 100:F0}%\n" +
+                            $"Zone: {order.ZoneType}\n" +
+                            $"Urgency: {order.Urgency}/5\n" +
+                            $"Deadline: day {order.DayDeadline}";
         }
 
         if (orderStatusText != null)
@@ -118,6 +131,14 @@ public class OrderPanelUI : MonoBehaviour
 
         if (deliverButton != null)
             deliverButton.interactable = false;
+    }
+
+    string GetOrderStatus(OrderData order)
+    {
+        if (order.IsCompleted) return "completed";
+        if (order.IsFailed) return "failed";
+        if (order.IsBusy) return "in progress";
+        return "active";
     }
 
     void OpenPanel()

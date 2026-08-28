@@ -16,8 +16,8 @@ public class OrderData
     public bool IsFailed;            /* Is order failed */
     public int DayCreated;           /* Day of order created */
     public int DayDeadline;          /* Deadline */
+    public bool IsBusy;
 
-    
     public OrderData(string title, float weight, int reward, int urgency,
                      Vector2 targetPosition, string zoneType, float risk, int dayCreated)
     {
@@ -32,7 +32,8 @@ public class OrderData
         IsCompleted = false;
         IsFailed = false;
         DayCreated = dayCreated;
-        DayDeadline = dayCreated + urgency; /* if level of order high - deadline is less */ 
+        DayDeadline = dayCreated + urgency; /* if level of order high - deadline is less */
+        IsBusy = false;
     }
 
     /* Check dedaline */
