@@ -256,12 +256,18 @@ public class OrderPanelUI : MonoBehaviour
         var progress = gameManager.GetProgress();
         if (progress == null) return;
 
+        int index = 0;
         foreach (var rover in progress.Rovers)
         {
             if (rover.IsDestroyed) continue;
             if (rover.IsBusy) continue;
 
+            Debug.Log($"Creating button {index} for rover {rover.Name}");
+
             GameObject btn = Instantiate(roverButtonPrefab, roversListParent);
+
+            btn.transform.SetAsLastSibling(); 
+
             RoverButtonUI buttonUI = btn.GetComponent<RoverButtonUI>();
 
             if (buttonUI != null)
@@ -272,6 +278,7 @@ public class OrderPanelUI : MonoBehaviour
             }
 
             roverButtons.Add(btn);
+            index++;
         }
     }
 

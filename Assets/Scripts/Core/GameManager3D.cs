@@ -13,7 +13,7 @@ public class GameManager3D : MonoBehaviour
     public GameObject orderPointPrefab3D;
 
     [Header("Rovers")]
-    public GameObject roverPrefab; 
+    public GameObject roverPrefab;
     public Transform roverParent;
 
     [Header("Base")]
@@ -80,10 +80,10 @@ public class GameManager3D : MonoBehaviour
 
         foreach (var rover in Progress.Rovers)
         {
-            /* ===== show destroyed rovers red color===== */
+            /* Skip destroyed rovers */
             if (rover.IsDestroyed)
             {
-                continue; 
+                continue;
             }
 
             GameObject roverGO = Instantiate(roverPrefab, roverParent);
@@ -107,7 +107,7 @@ public class GameManager3D : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             string zone = zones[Random.Range(0, zones.Length)];
-            float risk = zone == "Low" ? 0.1f : (zone == "Medium" ? 0.4f : 0.8f);
+            float risk = zone == "Low" ? 0.01f : (zone == "Medium" ? 0.3f : 0.7f);
 
             Progress.Orders.Add(new OrderData(
                 titles[Random.Range(0, titles.Length)],
@@ -132,7 +132,7 @@ public class GameManager3D : MonoBehaviour
 
         foreach (var order in Progress.Orders)
         {
-            /* ===== dont spawn competed orders ===== */
+            /* Dont spawn completed/ busy orders */
             if (!order.IsCompleted && !order.IsFailed && !order.IsBusy)
             {
                 GameObject point = Instantiate(orderPointPrefab3D, moonSurface);
@@ -147,7 +147,6 @@ public class GameManager3D : MonoBehaviour
     {
         Debug.Log($"Order selected: {order.Title}");
 
-        /* Focus camera on the order point */
         OrderPoint3D targetPoint = orderPoints.Find(p => p.Order == order);
         if (targetPoint != null)
         {
@@ -158,7 +157,6 @@ public class GameManager3D : MonoBehaviour
             }
         }
 
-        /* Show order panel */
         if (orderPanel != null)
         {
             orderPanel.ShowOrder(order);
@@ -172,7 +170,6 @@ public class GameManager3D : MonoBehaviour
 
     public void StartDelivery(RoverData rover, OrderData order)
     {
-        /* Check order complete */
         if (order.IsCompleted || order.IsBusy)
         {
             Debug.LogWarning($"Order {order.Title} is already in progress or completed!");
@@ -193,94 +190,86 @@ public class GameManager3D : MonoBehaviour
             return;
         }
 
-        /* ===== Chance of destroy by risk ===== */
-        float riskRoll = Random.Range(0f, 1f);
-        bool isDestroyed = riskRoll < order.Risk;
-
-        if (isDestroyed)
-        {
-            Debug.Log($"💥 Rover {rover.Name} was DESTROYED in zone {order.ZoneType}! (risk: {order.Risk * 100:F0}%, roll: {riskRoll * 100:F0}%)");
-
-            /* Desotoyed rover */
-            rover.IsDestroyed = true;
-            rover.IsBusy = false;
-
-            /* Debuff by rover destroyed */
-            Progress.ChangeRating(-10f);
-            Progress.TotalDeliveriesFailed++;
-
-            if (orderPanel != null && orderPanel.IsPanelOpen())
-            {
-                orderPanel.ClosePanel();
-            }
-
-            CameraController cam = FindFirstObjectByType<CameraController>();
-            if (cam != null)
-            {
-                if (cam.IsFocusing()) cam.ExitFocusMode();
-                cam.isUIActive = false;
-            }
-
-            if (roverVis != null)
-            {
-                roverVis.gameObject.SetActive(false);
-            }
-
-            SaveManager.Save(Progress);
-            Debug.Log($"💀 Rover lost! Rating -10");
-            return;
-        }
-
-        /* ===== Rover is alive. Normal delivery ===== */
-
-        /* battery */
+        /* Battery usage */
         float batteryUsed = order.Weight * 0.5f;
         rover.UseBattery(batteryUsed);
         rover.IsBusy = true;
-
-        /* mark as busy */
         order.IsBusy = true;
 
-        /* exit focus */
-        CameraController cam2 = FindFirstObjectByType<CameraController>();
-        if (cam2 != null)
+        /* Exit focus */
+        CameraController cam = FindFirstObjectByType<CameraController>();
+        if (cam != null)
         {
-            if (cam2.IsFocusing()) cam2.ExitFocusMode();
-            cam2.isUIActive = false;
+            if (cam.IsFocusing()) cam.ExitFocusMode();
+            cam.isUIActive = false;
         }
 
-        /* close panel */
+        /* Close panel */
         if (orderPanel != null && orderPanel.IsPanelOpen())
         {
             orderPanel.ClosePanel();
         }
 
-        /* Change color of order (gray) */
+        /* Change color to gray */
         if (targetPoint != null)
         {
             targetPoint.SetColor(Color.gray);
         }
 
-        roverVis.onDeliveryComplete = () => {
-            Progress.AddMoney(order.Reward);
-            Progress.TotalDeliveriesCompleted++;
-            Progress.ChangeRating(2f);
+        /* ===== BIND TO ROVER DESTROY ===== */
+        roverVis.onRoverDestroyed = () => {
+            Progress.ChangeRating(-10f);
+            Progress.TotalDeliveriesFailed++;
 
-            /* Delete order point after delivery */
+            /* Order still active (can send other rover) */
+            order.IsBusy = false;
+
+            /* Return color to point */
             if (targetPoint != null)
             {
-                Destroy(targetPoint.gameObject);
-                orderPoints.Remove(targetPoint);
+                targetPoint.SetColor(GetOrderColor(order));
             }
 
             SaveManager.Save(Progress);
-            Debug.Log($"✅ Delivery complete! +{order.Reward} credits, +2 rating");
+            Debug.Log($"💀 Rover lost! Rating -10");
+        };
+
+        /* ===== BIND TO SUCCESS DELIVERY ===== */
+        roverVis.onDeliveryComplete = () => {
+            if (!rover.IsDestroyed)
+            {
+                Progress.AddMoney(order.Reward);
+                Progress.TotalDeliveriesCompleted++;
+                Progress.ChangeRating(2f);
+
+                /* Delete order point after rover returned */
+                if (targetPoint != null)
+                {
+                    Destroy(targetPoint.gameObject);
+                    orderPoints.Remove(targetPoint);
+                }
+
+                SaveManager.Save(Progress);
+                Debug.Log($"✅ Delivery complete! +{order.Reward} credits, +2 rating");
+            }
         };
 
         roverVis.MoveTo(targetPoint.transform);
 
         SaveManager.Save(Progress);
         Debug.Log($"🚀 Rover {rover.Name} sent to {order.Title}!");
+    }
+
+    /* Helper method for color */
+    Color GetOrderColor(OrderData order)
+    {
+        switch (order.ZoneType)
+        {
+            case "Low": return Color.green;
+            case "Medium": return Color.yellow;
+            case "High": return Color.red;
+            default: return Color.white;
+        }
     }
 
     void UpdateOrderVisuals()

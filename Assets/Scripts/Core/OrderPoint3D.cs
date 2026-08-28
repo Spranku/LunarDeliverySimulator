@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class OrderPoint3D : MonoBehaviour
 {
@@ -52,6 +52,7 @@ public class OrderPoint3D : MonoBehaviour
     public void Initialize(OrderData order, Transform moonSurface)
     {
         Order = order;
+        Debug.Log($"📍 Point {order.Title}: zone={order.ZoneType}, risk={order.Risk * 100:F0}%");
 
         Vector3 direction = Random.onUnitSphere;
         float moonRadius = moonSurface.localScale.x * 0.5f;

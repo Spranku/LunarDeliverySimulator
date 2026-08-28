@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 
 public class RoverVisual : MonoBehaviour
@@ -11,7 +11,7 @@ public class RoverVisual : MonoBehaviour
     [Tooltip("Speed multiplier: 1 = 0.1 actual speed")]
     public float moveSpeedMultiplier = 1f;
 
-    private float actualMoveSpeed = 0.1f; 
+    private float actualMoveSpeed = 0.1f;
     private bool isMoving = false;
     private Vector3 startPosition;
     private float moveProgress = 0f;
@@ -22,6 +22,12 @@ public class RoverVisual : MonoBehaviour
 
     public System.Action onDeliveryComplete;
     public System.Action onReachedDestination;
+    public System.Action onRoverDestroyed;
+
+    private bool isDestroyed = false;
+    private float riskCheckThreshold = 0.7f;
+
+    private bool riskChecked = false;
 
     public void Initialize(RoverData roverData, Transform moon, Vector3 basePos)
     {
@@ -34,6 +40,7 @@ public class RoverVisual : MonoBehaviour
 
     void Update()
     {
+        if (isDestroyed) return;
         if (!isMoving) return;
 
         if (!isReturning && targetTransform != null)
@@ -41,18 +48,34 @@ public class RoverVisual : MonoBehaviour
             targetPosition = targetTransform.position;
         }
 
-        
         float speed = actualMoveSpeed * moveSpeedMultiplier;
         moveProgress += Time.deltaTime * speed;
+
+        if (!isReturning && !isDestroyed && moveProgress >= riskCheckThreshold && !riskChecked)
+        {
+            CheckRisk(true);
+            riskChecked = true;
+        }
+
+        if (isReturning && !isDestroyed && moveProgress >= riskCheckThreshold && !riskChecked)
+        {
+            CheckRisk(false);
+            riskChecked = true;
+        }
 
         if (moveProgress >= 1f)
         {
             moveProgress = 1f;
 
             Vector3 finalPos = GetPositionOnSurface(targetPosition);
-
             transform.position = finalPos;
             data.CurrentPosition = finalPos;
+
+            if (isDestroyed)
+            {
+                isMoving = false;
+                return;
+            }
 
             if (isReturning)
             {
@@ -73,7 +96,6 @@ public class RoverVisual : MonoBehaviour
 
         float t = Mathf.SmoothStep(0f, 1f, moveProgress);
         Vector3 pos = Vector3.Lerp(startPosition, targetPosition, t);
-
         pos = GetPositionOnSurface(pos);
 
         transform.position = pos;
@@ -90,6 +112,54 @@ public class RoverVisual : MonoBehaviour
         }
     }
 
+    void CheckRisk(bool onWayToOrder)
+    {
+        if (isDestroyed) return;
+        if (data == null) return;
+
+        float risk = 0f;
+        string zoneName = "Unknown";
+
+        if (targetTransform != null)
+        {
+            OrderPoint3D point = targetTransform.GetComponent<OrderPoint3D>();
+            if (point != null && point.Order != null)
+            {
+                risk = point.Order.Risk;
+                zoneName = point.Order.ZoneType;
+            }
+        }
+
+        float roll = Random.Range(0f, 1f);
+
+        Debug.Log($"⚠️ {data.Name}: zone={zoneName}, risk={risk * 100:F2}%, roll={roll * 100:F2}%");
+
+        if (roll < risk)
+        {
+            isDestroyed = true;
+            data.IsDestroyed = true;
+            data.IsBusy = false;
+            isMoving = false; 
+            riskChecked = true;
+
+            string location = onWayToOrder ? "on the way to order" : "on the way back to base";
+            Debug.Log($"💥 {data.Name} DESTROYED! (risk: {risk * 100:F2}%, roll: {roll * 100:F2}%)");
+
+            StartCoroutine(DestroyRoverWithEffect());
+            onRoverDestroyed?.Invoke();
+        }
+        else
+        {
+            Debug.Log($"✅ {data.Name} survived! (risk: {risk * 100:F2}%, roll: {roll * 100:F2}%)");
+        }
+    }
+
+    IEnumerator DestroyRoverWithEffect()
+    {
+        yield return new WaitForSeconds(0.2f);
+        Destroy(gameObject);
+    }
+
     private Vector3 GetPositionOnSurface(Vector3 worldPos)
     {
         if (moonSurface == null) return worldPos;
@@ -102,6 +172,7 @@ public class RoverVisual : MonoBehaviour
     public void MoveTo(Transform target)
     {
         if (isMoving) return;
+        if (data.IsDestroyed) return;
 
         targetTransform = target;
         targetPosition = GetPositionOnSurface(target.position);
@@ -110,6 +181,8 @@ public class RoverVisual : MonoBehaviour
         startPosition = GetPositionOnSurface(data.CurrentPosition);
         moveProgress = 0f;
         data.IsBusy = true;
+        isDestroyed = false;
+        riskChecked = false; 
         gameObject.SetActive(true);
     }
 
@@ -117,12 +190,15 @@ public class RoverVisual : MonoBehaviour
     {
         yield return new WaitForSeconds(0.2f);
 
+        if (isDestroyed) yield break;
+
         startPosition = transform.position;
         targetPosition = GetPositionOnSurface(basePosition);
 
         moveProgress = 0f;
         isMoving = true;
         isReturning = true;
+        riskChecked = false; 
         targetTransform = null;
     }
 
