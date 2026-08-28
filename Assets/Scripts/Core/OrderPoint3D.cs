@@ -104,11 +104,21 @@ public class OrderPoint3D : MonoBehaviour
         transform.localScale = Vector3.one * scale;
     }
 
+    public void SetColor(Color color)
+    {
+        if (myRenderer != null && myRenderer.material != null)
+        {
+            color.a = alpha;
+            myRenderer.material.color = color;
+            Debug.Log($"Point {Order?.Title} color changed to {color}");
+        }
+    }
+
     void OnMouseDown()
     {
         if (Order == null) return;
 
-        /* ===== Dont choice competed order ===== */
+        /* ===== Dont choice competed or busy order ===== */
         if (Order.IsCompleted || Order.IsBusy)
         {
             Debug.Log($"Order {Order.Title} is already completed or in progress!");

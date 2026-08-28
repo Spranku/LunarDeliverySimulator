@@ -197,7 +197,7 @@ public class GameManager3D : MonoBehaviour
         rover.UseBattery(batteryUsed);
         rover.IsBusy = true;
 
-        /* ===== mark as complete order ===== */
+        /* mark as complete order */
         order.IsCompleted = true;
         order.IsBusy = true;
 
@@ -209,22 +209,31 @@ public class GameManager3D : MonoBehaviour
             cam.isUIActive = false;
         }
 
-        /* ===== close panel ===== */
+        /* close panel */
         if (orderPanel != null && orderPanel.IsPanelOpen())
         {
             orderPanel.ClosePanel();
         }
 
-        /* ===== Delete point from moon ===== */
-        UpdateOrderVisuals();
+        /* ===== change color for processing order ===== */
+        if (targetPoint != null)
+        {
+            targetPoint.SetColor(Color.gray);
+        }
 
         roverVis.onDeliveryComplete = () => {
             Progress.AddMoney(order.Reward);
             Progress.TotalDeliveriesCompleted++;
             Progress.ChangeRating(2f);
 
-            SaveManager.Save(Progress);
+            /* ===== Delete point  ===== */
+            if (targetPoint != null)
+            {
+                Destroy(targetPoint.gameObject);
+                orderPoints.Remove(targetPoint);
+            }
 
+            SaveManager.Save(Progress);
             Debug.Log($"✅ Delivery complete! +{order.Reward} credits, +2 rating");
         };
 
