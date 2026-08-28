@@ -106,6 +106,15 @@ public class OrderPoint3D : MonoBehaviour
 
     void OnMouseDown()
     {
+        if (Order == null) return;
+
+        /* ===== Dont choice competed order ===== */
+        if (Order.IsCompleted || Order.IsBusy)
+        {
+            Debug.Log($"Order {Order.Title} is already completed or in progress!");
+            return;
+        }
+
         var gm = FindFirstObjectByType<GameManager3D>();
         if (gm != null)
         {

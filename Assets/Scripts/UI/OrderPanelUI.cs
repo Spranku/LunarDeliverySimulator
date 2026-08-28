@@ -81,11 +81,12 @@ public class OrderPanelUI : MonoBehaviour
             return;
         }
 
-        /* ===== Dont show order if in progress ===== */
+        /* ===== Dont show order in progress or complete ===== */
         if (order.IsCompleted || order.IsBusy)
         {
             Debug.Log($"Order {order.Title} is already completed or in progress!");
 
+            /* Если заказ уже выполнен — закрываем панель */
             if (IsPanelOpen())
             {
                 ClosePanel();

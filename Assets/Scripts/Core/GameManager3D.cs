@@ -131,7 +131,8 @@ public class GameManager3D : MonoBehaviour
 
         foreach (var order in Progress.Orders)
         {
-            if (!order.IsCompleted && !order.IsFailed)
+            /* ===== dont spawn competed orders ===== */
+            if (!order.IsCompleted && !order.IsFailed && !order.IsBusy)
             {
                 GameObject point = Instantiate(orderPointPrefab3D, moonSurface);
                 OrderPoint3D pointScript = point.GetComponent<OrderPoint3D>();
@@ -170,7 +171,13 @@ public class GameManager3D : MonoBehaviour
 
     public void StartDelivery(RoverData rover, OrderData order)
     {
-        /* Find order point */
+        /* Check order complete */
+        if (order.IsCompleted || order.IsBusy)
+        {
+            Debug.LogWarning($"Order {order.Title} is already in progress or completed!");
+            return;
+        }
+
         OrderPoint3D targetPoint = orderPoints.Find(p => p.Order == order);
         if (targetPoint == null)
         {
@@ -178,7 +185,6 @@ public class GameManager3D : MonoBehaviour
             return;
         }
 
-        /* Find rover visual */
         RoverVisual roverVis = roverVisuals.Find(r => r.data == rover);
         if (roverVis == null)
         {
@@ -186,12 +192,16 @@ public class GameManager3D : MonoBehaviour
             return;
         }
 
-        /* Battery */
+        /* battery */
         float batteryUsed = order.Weight * 0.5f;
         rover.UseBattery(batteryUsed);
         rover.IsBusy = true;
 
-        /* Return from focus */
+        /* ===== mark as complete order ===== */
+        order.IsCompleted = true;
+        order.IsBusy = true;
+
+        /* exit focus */
         CameraController cam = FindFirstObjectByType<CameraController>();
         if (cam != null)
         {
@@ -199,21 +209,29 @@ public class GameManager3D : MonoBehaviour
             cam.isUIActive = false;
         }
 
-        /* Bind event on finish delivery */
+        /* ===== close panel ===== */
+        if (orderPanel != null && orderPanel.IsPanelOpen())
+        {
+            orderPanel.ClosePanel();
+        }
+
+        /* ===== Delete point from moon ===== */
+        UpdateOrderVisuals();
+
         roverVis.onDeliveryComplete = () => {
-            order.IsCompleted = true;
             Progress.AddMoney(order.Reward);
             Progress.TotalDeliveriesCompleted++;
-            UpdateOrderVisuals();
+            Progress.ChangeRating(2f);
+
             SaveManager.Save(Progress);
-            Debug.Log($"✅ Delivery finished ! +{order.Reward} credits");
+
+            Debug.Log($"✅ Delivery complete! +{order.Reward} credits, +2 rating");
         };
 
-        /* Send rover to transform of order point  */
         roverVis.MoveTo(targetPoint.transform);
 
         SaveManager.Save(Progress);
-        Debug.Log($"🚀 Rover {rover.Name} to go to the order {order.Title}!");
+        Debug.Log($"🚀 Rover {rover.Name} sent to {order.Title}!");
     }
 
     void UpdateOrderVisuals()
@@ -223,7 +241,8 @@ public class GameManager3D : MonoBehaviour
             if (orderPoints[i] == null) continue;
 
             OrderPoint3D point = orderPoints[i];
-            if (point != null && point.Order != null && point.Order.IsCompleted)
+            if (point != null && point.Order != null &&
+                (point.Order.IsCompleted || point.Order.IsBusy))
             {
                 Destroy(point.gameObject);
                 orderPoints.RemoveAt(i);
