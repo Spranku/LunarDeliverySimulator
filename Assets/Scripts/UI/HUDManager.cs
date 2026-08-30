@@ -4,6 +4,9 @@ using System.Collections;
 
 public class HUDManager : MonoBehaviour
 {
+    private static HUDManager instance;
+    public static HUDManager Instance => instance;
+
     [Header("References")]
     public GameManager3D gameManager;
 
@@ -25,32 +28,19 @@ public class HUDManager : MonoBehaviour
     public GameObject sharedOverlay;
     public float animationDuration = 0.3f;
 
-    [Header("Day Timer")]
-    public Text dayTimerText;
-
     private bool isMenuOpen = false;
     private RectTransform menuRect;
     private Vector2 menuClosedPos;
     private Vector2 menuOpenPos;
     private Coroutine animCoroutine;
-
     private OrderPanelUI orderPanel;
-    private float overlayBlockTime = 0f;
-    private bool isOverlayClickBlocked = false;
-
-    private static HUDManager instance;
-    public static HUDManager Instance => instance;
 
     void Awake()
     {
         if (instance == null)
-        {
             instance = this;
-        }
         else
-        {
             Destroy(gameObject);
-        }
     }
 
     void Start()
@@ -73,7 +63,6 @@ public class HUDManager : MonoBehaviour
             menuPanel.SetActive(false);
         }
 
-        /* Shared Overlay setup */
         if (sharedOverlay != null)
         {
             Image img = sharedOverlay.GetComponent<Image>();
@@ -123,15 +112,19 @@ public class HUDManager : MonoBehaviour
         var progress = gameManager.GetProgress();
         if (progress == null) return;
 
+        /* Day */
         if (dayText != null)
             dayText.text = $"Day {progress.Day}";
 
+        /* Money */
         if (moneyText != null)
             moneyText.text = $"💰 {progress.Money}";
 
+        /* Rating */
         if (ratingText != null)
             ratingText.text = $"⭐ {progress.BaseRating:F0}%";
 
+        /* Rovers status with color */
         if (roversStatusText != null)
         {
             int total = progress.Rovers.Count;
@@ -145,17 +138,11 @@ public class HUDManager : MonoBehaviour
             }
 
             roversStatusText.text = $"🚀 {available}/{total}";
-            roversStatusText.color = destroyed > 0 ? Color.red : (available == 0 ? Color.yellow : Color.white);
-        }
-    }
 
-    public void UpdateDayTimer(float timeLeft)
-    {
-        if (dayTimerText != null)
-        {
-            int minutes = Mathf.FloorToInt(timeLeft / 60f);
-            int seconds = Mathf.FloorToInt(timeLeft % 60f);
-            dayTimerText.text = $"⏱️ {minutes:00}:{seconds:00}";
+            if (available > 0)
+                roversStatusText.color = Color.green;
+            else
+                roversStatusText.color = Color.red;
         }
     }
 
@@ -163,16 +150,6 @@ public class HUDManager : MonoBehaviour
 
     void OnOverlayClick()
     {
-        if (isOverlayClickBlocked)
-        {
-            return;
-        }
-
-        if (Time.time - overlayBlockTime < 0.3f)
-        {
-            return;
-        }
-
         if (orderPanel != null && orderPanel.IsPanelOpen())
         {
             orderPanel.ClosePanel();
@@ -188,19 +165,7 @@ public class HUDManager : MonoBehaviour
     public void ShowOverlay()
     {
         if (sharedOverlay != null && !sharedOverlay.activeSelf)
-        {
             sharedOverlay.SetActive(true);
-            overlayBlockTime = Time.time;
-            isOverlayClickBlocked = true;
-
-            StartCoroutine(UnblockOverlayAfterDelay(0.3f));
-        }
-    }
-
-    IEnumerator UnblockOverlayAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        isOverlayClickBlocked = false;
     }
 
     public void HideOverlay()
@@ -211,10 +176,7 @@ public class HUDManager : MonoBehaviour
         if (!menuOpen && !orderOpen)
         {
             if (sharedOverlay != null && sharedOverlay.activeSelf)
-            {
                 sharedOverlay.SetActive(false);
-                isOverlayClickBlocked = false;
-            }
         }
     }
 
@@ -292,7 +254,6 @@ public class HUDManager : MonoBehaviour
     {
         if (menuPanel != null)
             menuPanel.SetActive(false);
-
         HideOverlay();
     }
 

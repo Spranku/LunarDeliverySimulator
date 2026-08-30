@@ -64,11 +64,6 @@ public class GameManager3D : MonoBehaviour
 
         dayTimer -= Time.deltaTime;
 
-        if (HUDManager.Instance != null)
-        {
-            HUDManager.Instance.UpdateDayTimer(dayTimer);
-        }
-
         generationTimer += Time.deltaTime;
         if (generationTimer >= orderGenerationInterval)
         {
@@ -271,22 +266,41 @@ public class GameManager3D : MonoBehaviour
 
     void VisualizeOrders()
     {
-        foreach (var point in orderPoints)
+        /* Delete only unactive orders */
+        for (int i = orderPoints.Count - 1; i >= 0; i--)
         {
-            Destroy(point.gameObject);
-        }
-        orderPoints.Clear();
+            if (orderPoints[i] == null) continue;
 
+            OrderData order = orderPoints[i].Order;
+            if (order == null) continue;
+
+            /* Order success finished - delete it */
+            if (order.IsCompleted || order.IsFailed)
+            {
+                Destroy(orderPoints[i].gameObject);
+                orderPoints.RemoveAt(i);
+            }
+        }
+
+        /* Add new points for new orders */
         foreach (var order in Progress.Orders)
         {
-            /* Dont spawn completed/ busy orders */
-            if (!order.IsCompleted && !order.IsFailed && !order.IsBusy)
+            if (order.IsCompleted || order.IsFailed) continue;
+
+            bool exists = orderPoints.Exists(p => p.Order == order);
+            if (exists) continue;
+
+
+            GameObject point = Instantiate(orderPointPrefab3D, moonSurface);
+            OrderPoint3D pointScript = point.GetComponent<OrderPoint3D>();
+            pointScript.Initialize(order, moonSurface);
+
+            if (order.IsBusy)
             {
-                GameObject point = Instantiate(orderPointPrefab3D, moonSurface);
-                OrderPoint3D pointScript = point.GetComponent<OrderPoint3D>();
-                pointScript.Initialize(order, moonSurface);
-                orderPoints.Add(pointScript);
+                pointScript.SetColor(Color.gray);
             }
+
+            orderPoints.Add(pointScript);
         }
     }
 
@@ -426,11 +440,18 @@ public class GameManager3D : MonoBehaviour
             if (orderPoints[i] == null) continue;
 
             OrderPoint3D point = orderPoints[i];
-            if (point != null && point.Order != null &&
-                (point.Order.IsCompleted || point.Order.IsBusy))
+            if (point != null && point.Order != null)
             {
-                Destroy(point.gameObject);
-                orderPoints.RemoveAt(i);
+                /* Delete only finished orders */
+                if (point.Order.IsCompleted || point.Order.IsFailed)
+                {
+                    Destroy(point.gameObject);
+                    orderPoints.RemoveAt(i);
+                }
+                else if (point.Order.IsBusy)
+                {
+                    point.SetColor(Color.gray);
+                }
             }
         }
     }
