@@ -85,8 +85,6 @@ public class OrderPanelUI : MonoBehaviour
         if (order.IsCompleted || order.IsBusy)
         {
             Debug.Log($"Order {order.Title} is already completed or in progress!");
-
-            /* Если заказ уже выполнен — закрываем панель */
             if (IsPanelOpen())
             {
                 ClosePanel();
@@ -110,7 +108,7 @@ public class OrderPanelUI : MonoBehaviour
 
         if (infoText != null)
         {
-            infoText.text = $"Weight: {order.Weight:F1} kg\n" +
+            infoText.text = $"Weight: {order.Weight:F1} kg ({order.WeightCategory})\n" +
                             $"Reward: {order.Reward} credits\n" +
                             $"Risk: {order.Risk * 100:F0}%\n" +
                             $"Zone: {order.ZoneType}\n" +
@@ -118,6 +116,7 @@ public class OrderPanelUI : MonoBehaviour
                             $"Deadline: day {order.DayDeadline}";
         }
 
+        /* Статус заказа */
         if (orderStatusText != null)
         {
             if (order.IsCompleted)

@@ -8,10 +8,12 @@ public class RoverVisual : MonoBehaviour
     public Transform moonSurface;
 
     [Header("Movement")]
-    [Tooltip("Speed multiplier: 1 = 0.1 actual speed")]
+    public float baseMoveSpeed = 0.1f;
+    public float maxWeightPenalty = 0.5f;
+    public float weightThreshold = 100f;
     public float moveSpeedMultiplier = 1f;
 
-    private float actualMoveSpeed = 0.1f;
+    private float currentMoveSpeed = 0.1f;
     private bool isMoving = false;
     private Vector3 startPosition;
     private float moveProgress = 0f;
@@ -26,7 +28,6 @@ public class RoverVisual : MonoBehaviour
 
     private bool isDestroyed = false;
     private float riskCheckThreshold = 0.7f;
-
     private bool riskChecked = false;
 
     public void Initialize(RoverData roverData, Transform moon, Vector3 basePos)
@@ -48,7 +49,8 @@ public class RoverVisual : MonoBehaviour
             targetPosition = targetTransform.position;
         }
 
-        float speed = actualMoveSpeed * moveSpeedMultiplier;
+        /* Используем currentMoveSpeed вместо actualMoveSpeed */
+        float speed = currentMoveSpeed * moveSpeedMultiplier;
         moveProgress += Time.deltaTime * speed;
 
         if (!isReturning && !isDestroyed && moveProgress >= riskCheckThreshold && !riskChecked)
@@ -139,7 +141,7 @@ public class RoverVisual : MonoBehaviour
             isDestroyed = true;
             data.IsDestroyed = true;
             data.IsBusy = false;
-            isMoving = false; 
+            isMoving = false;
             riskChecked = true;
 
             string location = onWayToOrder ? "on the way to order" : "on the way back to base";
@@ -169,20 +171,29 @@ public class RoverVisual : MonoBehaviour
         return moonSurface.position + direction * radius;
     }
 
-    public void MoveTo(Transform target)
+    public void MoveTo(Transform target, float orderWeight)
     {
         if (isMoving) return;
         if (data.IsDestroyed) return;
 
         targetTransform = target;
         targetPosition = GetPositionOnSurface(target.position);
+
+        /* ===== Speed by weight ===== */
+        float weightFactor = Mathf.Clamp01(orderWeight / weightThreshold);
+        float speedPenalty = weightFactor * maxWeightPenalty;
+        currentMoveSpeed = baseMoveSpeed * (1f - speedPenalty);
+        currentMoveSpeed = Mathf.Max(currentMoveSpeed, 0.01f);
+
+        Debug.Log($"🚀 {data.Name}: weight={orderWeight}kg, penalty={speedPenalty * 100:F0}%, speed={currentMoveSpeed:F3}");
+
         isMoving = true;
         isReturning = false;
         startPosition = GetPositionOnSurface(data.CurrentPosition);
         moveProgress = 0f;
         data.IsBusy = true;
         isDestroyed = false;
-        riskChecked = false; 
+        riskChecked = false;
         gameObject.SetActive(true);
     }
 
@@ -198,8 +209,10 @@ public class RoverVisual : MonoBehaviour
         moveProgress = 0f;
         isMoving = true;
         isReturning = true;
-        riskChecked = false; 
+        riskChecked = false;
         targetTransform = null;
+
+        Debug.Log($"↩️ {data.Name} returning to base with speed {currentMoveSpeed:F3}");
     }
 
     void UpdateVisual()

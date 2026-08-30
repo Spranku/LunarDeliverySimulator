@@ -127,17 +127,25 @@ public class HUDManager : MonoBehaviour
         /* Rovers status with color */
         if (roversStatusText != null)
         {
-            int total = progress.Rovers.Count;
-            int available = 0;
-            int destroyed = 0;
+            int total = progress.Rovers.Count;              // Total roverw (включая уничтоженных)
+            int alive = 0;                                  // Alive rovers
+            int available = 0;                              // Free rovers
+            int destroyed = 0;                              // Destroyed
 
             foreach (var rover in progress.Rovers)
             {
-                if (rover.IsDestroyed) destroyed++;
-                else if (!rover.IsBusy) available++;
+                if (rover.IsDestroyed)
+                {
+                    destroyed++;
+                }
+                else
+                {
+                    alive++;
+                    if (!rover.IsBusy) available++;
+                }
             }
 
-            roversStatusText.text = $"🚀 {available}/{total}";
+            roversStatusText.text = $"🚀 {alive}/{total}";
 
             if (available > 0)
                 roversStatusText.color = Color.green;

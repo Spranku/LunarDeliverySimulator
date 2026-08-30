@@ -415,7 +415,7 @@ public class GameManager3D : MonoBehaviour
             }
         };
 
-        roverVis.MoveTo(targetPoint.transform);
+        roverVis.MoveTo(targetPoint.transform, order.Weight);
 
         SaveManager.Save(Progress);
         Debug.Log($"🚀 Rover {rover.Name} sent to {order.Title}!");

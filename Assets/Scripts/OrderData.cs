@@ -36,6 +36,16 @@ public class OrderData
         IsBusy = false;
     }
 
+    public string WeightCategory
+    {
+        get
+        {
+            if (Weight < 20f) return "Light";
+            if (Weight < 50f) return "Medium";
+            return "Heavy";
+        }
+    }
+
     /* Check dedaline */
     public bool IsOverdue(int currentDay)
     {
