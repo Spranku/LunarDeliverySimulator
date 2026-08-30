@@ -16,6 +16,17 @@ public class HUDManager : MonoBehaviour
     public Text ratingText;
     public Text roversStatusText;
 
+    [Header("Stats Panel")]
+    public GameObject statsPanel;
+    public Text statsTitleText;
+    public Text statsTotalOrdersText;
+    public Text statsCompletedText;
+    public Text statsFailedText;
+    public Text statsMoneyEarnedText;
+    public Text statsRoversLostText;
+    public Text statsDaysSurvivedText;
+    public Button statsCloseButton;
+
     [Header("Buttons")]
     public Button menuButton;
     public Button ordersButton;
@@ -49,6 +60,12 @@ public class HUDManager : MonoBehaviour
             gameManager = FindFirstObjectByType<GameManager3D>();
 
         orderPanel = FindFirstObjectByType<OrderPanelUI>();
+
+        if (statsPanel != null)
+            statsPanel.SetActive(false);
+
+        if (statsCloseButton != null)
+            statsCloseButton.onClick.AddListener(CloseStatsPanel);
 
         if (menuPanel != null)
         {
@@ -127,7 +144,7 @@ public class HUDManager : MonoBehaviour
         /* Rovers status with color */
         if (roversStatusText != null)
         {
-            int total = progress.Rovers.Count;              // Total roverw (включая уничтоженных)
+            int total = progress.Rovers.Count;              // Total roverw 
             int alive = 0;                                  // Alive rovers
             int available = 0;                              // Free rovers
             int destroyed = 0;                              // Destroyed
@@ -154,13 +171,77 @@ public class HUDManager : MonoBehaviour
         }
     }
 
+    /* ===== STATS PANEL ===== */
+
+    public void OpenStatsPanel()
+    {
+        if (statsPanel == null) return;
+
+        CloseAllSubPanels();
+
+        UpdateStatsPanel();
+
+        statsPanel.SetActive(true);
+        ShowOverlay();
+
+        Debug.Log("Stats panel opened");
+    }
+
+    public void CloseStatsPanel()
+    {
+        if (statsPanel != null)
+            statsPanel.SetActive(false);
+
+        HideOverlay();
+        Debug.Log("Stats panel closed");
+    }
+
+    void UpdateStatsPanel()
+    {
+        var progress = gameManager.GetProgress();
+        if (progress == null) return;
+
+        int total = progress.TotalDeliveriesCompleted + progress.TotalDeliveriesFailed;
+        int roversLost = 0;
+        foreach (var rover in progress.Rovers)
+        {
+            if (rover.IsDestroyed) roversLost++;
+        }
+
+        if (statsTitleText != null)
+            statsTitleText.text = "📊 Stats";
+
+        if (statsTotalOrdersText != null)
+            statsTotalOrdersText.text = $"📦 Total Orders: {total}";
+
+        if (statsCompletedText != null)
+            statsCompletedText.text = $"✅ Completed: {progress.TotalDeliveriesCompleted}";
+
+        if (statsFailedText != null)
+            statsFailedText.text = $"❌ Failed: {progress.TotalDeliveriesFailed}";
+
+        if (statsMoneyEarnedText != null)
+            statsMoneyEarnedText.text = $"💰 Money Earned: {progress.Money}";
+
+        if (statsRoversLostText != null)
+            statsRoversLostText.text = $"💀 Rovers Lost: {roversLost}";
+
+        if (statsDaysSurvivedText != null)
+            statsDaysSurvivedText.text = $"📅 Days Survived: {progress.Day}";
+    }
+
+    void CloseAllSubPanels()
+    {
+        if (statsPanel != null) statsPanel.SetActive(false);
+    }
+
     /* ===== OVERLAY ===== */
 
     void OnOverlayClick()
     {
-        if (orderPanel != null && orderPanel.IsPanelOpen())
+        if (statsPanel != null && statsPanel.activeSelf)
         {
-            orderPanel.ClosePanel();
+            CloseStatsPanel();
             return;
         }
 
@@ -280,6 +361,8 @@ public class HUDManager : MonoBehaviour
     void OnStatsClick()
     {
         Debug.Log("Stats button clicked");
+        OpenStatsPanel();  
+        CloseMenu();
     }
 
     void OnSettingsClick()
