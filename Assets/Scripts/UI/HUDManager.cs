@@ -25,6 +25,9 @@ public class HUDManager : MonoBehaviour
     public GameObject sharedOverlay;
     public float animationDuration = 0.3f;
 
+    [Header("Day Timer")]
+    public Text dayTimerText;
+
     private bool isMenuOpen = false;
     private RectTransform menuRect;
     private Vector2 menuClosedPos;
@@ -34,6 +37,21 @@ public class HUDManager : MonoBehaviour
     private OrderPanelUI orderPanel;
     private float overlayBlockTime = 0f;
     private bool isOverlayClickBlocked = false;
+
+    private static HUDManager instance;
+    public static HUDManager Instance => instance;
+
+    void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
 
     void Start()
     {
@@ -99,7 +117,7 @@ public class HUDManager : MonoBehaviour
             UpdateUI();
     }
 
-    void UpdateUI()
+    public void UpdateUI()
     {
         if (gameManager == null) return;
         var progress = gameManager.GetProgress();
@@ -128,6 +146,16 @@ public class HUDManager : MonoBehaviour
 
             roversStatusText.text = $"🚀 {available}/{total}";
             roversStatusText.color = destroyed > 0 ? Color.red : (available == 0 ? Color.yellow : Color.white);
+        }
+    }
+
+    public void UpdateDayTimer(float timeLeft)
+    {
+        if (dayTimerText != null)
+        {
+            int minutes = Mathf.FloorToInt(timeLeft / 60f);
+            int seconds = Mathf.FloorToInt(timeLeft % 60f);
+            dayTimerText.text = $"⏱️ {minutes:00}:{seconds:00}";
         }
     }
 
