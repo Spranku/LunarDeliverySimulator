@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class OrderPoint3D : MonoBehaviour
 {
@@ -52,6 +52,7 @@ public class OrderPoint3D : MonoBehaviour
     public void Initialize(OrderData order, Transform moonSurface)
     {
         Order = order;
+        Debug.Log($"📍 Point {order.Title}: zone={order.ZoneType}, risk={order.Risk * 100:F0}%");
 
         Vector3 direction = Random.onUnitSphere;
         float moonRadius = moonSurface.localScale.x * 0.5f;
@@ -104,8 +105,27 @@ public class OrderPoint3D : MonoBehaviour
         transform.localScale = Vector3.one * scale;
     }
 
+    public void SetColor(Color color)
+    {
+        if (myRenderer != null && myRenderer.material != null)
+        {
+            color.a = alpha;
+            myRenderer.material.color = color;
+            Debug.Log($"Point {Order?.Title} color changed to {color}");
+        }
+    }
+
     void OnMouseDown()
     {
+        if (Order == null) return;
+
+        /* ===== Dont choice competed or busy order ===== */
+        if (Order.IsCompleted || Order.IsBusy)
+        {
+            Debug.Log($"Order {Order.Title} is already completed or in progress!");
+            return;
+        }
+
         var gm = FindFirstObjectByType<GameManager3D>();
         if (gm != null)
         {
