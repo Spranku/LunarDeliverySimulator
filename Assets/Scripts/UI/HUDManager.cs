@@ -273,7 +273,6 @@ public class HUDManager : MonoBehaviour
             return;
         }
 
-        /* Очищаем список */
         foreach (Transform child in roversStatusListParent)
             Destroy(child.gameObject);
 
@@ -283,17 +282,28 @@ public class HUDManager : MonoBehaviour
             if (rover.IsDestroyed) continue;
 
             GameObject item = Instantiate(roverStatusItemPrefab, roversStatusListParent);
-            Text[] texts = item.GetComponentsInChildren<Text>();
 
-            if (texts.Length >= 4)
+            Text nameText = item.transform.Find("NameText")?.GetComponent<Text>();
+            Text batteryText = item.transform.Find("InfoRow/BatteryText")?.GetComponent<Text>();
+            Text capacityText = item.transform.Find("InfoRow/CapacityText")?.GetComponent<Text>();
+            Text statusText = item.transform.Find("InfoRow/StatusText")?.GetComponent<Text>();
+
+            if (nameText != null)
+                nameText.text = $"🚀 {rover.Name}";
+
+            if (batteryText != null)
+                batteryText.text = $"🔋 {rover.CurrentBattery:F0}/{rover.MaxBattery:F0}";
+
+            if (capacityText != null)
+                capacityText.text = $"📦 {rover.CargoCapacity} kg";
+
+            if (statusText != null)
             {
-                texts[0].text = rover.Name;
-                texts[1].text = $"🔋 {rover.CurrentBattery:F0}/{rover.MaxBattery:F0}";
-                texts[2].text = $"📦 {rover.CargoCapacity} kg";
-                texts[3].text = rover.IsBusy ? "⏳ Busy" : "✅ Idle";
-                texts[3].color = rover.IsBusy ? Color.yellow : Color.green;
-                count++;
+                statusText.text = rover.IsBusy ? "⏳ Busy" : "✅ Idle";
+                statusText.color = rover.IsBusy ? Color.yellow : Color.green;
             }
+
+            count++;
         }
 
         Debug.Log($"Rovers status panel updated: {count} rovers");
