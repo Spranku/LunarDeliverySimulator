@@ -388,22 +388,22 @@ public class HUDManager : MonoBehaviour
             {
                 if (order.IsCompleted)
                 {
-                    statusText.text = "✅ Выполнен";
+                    statusText.text = "Done";
                     statusText.color = Color.white;
                 }
                 else if (order.IsFailed)
                 {
-                    statusText.text = "❌ Провален";
+                    statusText.text = "Failed";
                     statusText.color = Color.red;
                 }
                 else if (order.IsBusy)
                 {
-                    statusText.text = "⏳ В пути";
+                    statusText.text = "In progress";
                     statusText.color = Color.yellow;
                 }
                 else
                 {
-                    statusText.text = "✅ Доступен";
+                    statusText.text = "Open";
                     statusText.color = Color.green;
                 }
             }
