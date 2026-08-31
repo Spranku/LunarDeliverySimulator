@@ -13,19 +13,17 @@ public class RoverButtonUI : MonoBehaviour
 
     void Awake()
     {
-        // Находим все тексты на объекте и в дочерних
+        
         Text[] texts = GetComponentsInChildren<Text>();
 
         if (texts.Length >= 3)
         {
-            // Если три текста - назначаем по порядку
             nameText = texts[0];
             batteryText = texts[1];
             capacityText = texts[2];
         }
         else
         {
-            // Ищем по имени
             foreach (Text t in texts)
             {
                 if (t.gameObject.name == "NameText")
@@ -48,9 +46,9 @@ public class RoverButtonUI : MonoBehaviour
         if (nameText != null)
             nameText.text = rover.Name;
         if (batteryText != null)
-            batteryText.text = $"🔋 {rover.CurrentBattery:F0}/{rover.MaxBattery:F0}";
+            batteryText.text = $" {rover.CurrentBattery:F0}/{rover.MaxBattery:F0}";
         if (capacityText != null)
-            capacityText.text = $"📦 {rover.CargoCapacity} кг";
+            capacityText.text = $" {rover.CargoCapacity} kg";
 
         if (button != null)
         {

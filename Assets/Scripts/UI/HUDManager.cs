@@ -64,6 +64,9 @@ public class HUDManager : MonoBehaviour
     public GameObject sharedOverlay;
     public float animationDuration = 0.3f;
 
+    [Header("Base Panel")]
+    public MoonBasePanelUI basePanel;
+
     private bool isMenuOpen = false;
     private RectTransform menuRect;
     private Vector2 menuClosedPos;
@@ -81,6 +84,9 @@ public class HUDManager : MonoBehaviour
 
     void Start()
     {
+        /* Base Panel */
+        if (basePanel != null && basePanel.panel != null)
+            basePanel.panel.SetActive(false);
 
         /* Resolution Dropdown */
         resolutions = Screen.resolutions;
@@ -833,6 +839,11 @@ public class HUDManager : MonoBehaviour
         if (roversStatusPanel != null) roversStatusPanel.SetActive(false);
         if (ordersPanel != null) ordersPanel.SetActive(false);
         if (settingsPanel != null) settingsPanel.SetActive(false);
+
+        if (basePanel != null)
+        {
+            basePanel.ClosePanel();
+        }
     }
 
     #region BUTTON HANDLERS

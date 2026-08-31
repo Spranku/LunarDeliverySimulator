@@ -116,7 +116,7 @@ public class OrderPanelUI : MonoBehaviour
                             $"Deadline: day {order.DayDeadline}";
         }
 
-        /* Статус заказа */
+        /* Status of order */
         if (orderStatusText != null)
         {
             if (order.IsCompleted)

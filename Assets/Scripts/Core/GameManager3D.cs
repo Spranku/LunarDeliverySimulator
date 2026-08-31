@@ -128,6 +128,10 @@ public class GameManager3D : MonoBehaviour
         {
             basePanel.ShowBase(basePoint);
         }
+        else
+        {
+            Debug.LogError("BasePanel is not assigned in GameManager3D!");
+        }
     }
 
     public void VisualizeBase()
@@ -295,6 +299,54 @@ public class GameManager3D : MonoBehaviour
             }
         }
 
+        /* ===== Check soft lock ===== */
+        if (activeOrders > 0)
+        {
+            bool hasDeliverableOrder = false;
+
+            foreach (var order in Progress.Orders)
+            {
+                if (order.IsCompleted || order.IsFailed || order.IsBusy) continue;
+
+                /* Check rover for delivery */
+                foreach (var rover in Progress.Rovers)
+                {
+                    if (rover.IsDestroyed || rover.IsBusy) continue;
+                    if (rover.CargoCapacity >= order.Weight && rover.CurrentBattery >= order.Weight * 0.5f)
+                    {
+                        hasDeliverableOrder = true;
+                        break;
+                    }
+                }
+
+                if (hasDeliverableOrder) break;
+            }
+
+            /* New generation if delivery unavaliable */
+            if (!hasDeliverableOrder && activeOrders > 0)
+            {
+                Debug.LogWarning("⚠️ No deliverable orders found! Regenerating orders...");
+
+                /* delete all active orders */
+                for (int i = Progress.Orders.Count - 1; i >= 0; i--)
+                {
+                    var order = Progress.Orders[i];
+                    if (!order.IsCompleted && !order.IsFailed && !order.IsBusy)
+                    {
+                        Progress.Orders.RemoveAt(i);
+                    }
+                }
+
+                /* Generate new (light) orders */
+                GenerateOrders(minActiveOrders);
+                VisualizeOrders();
+
+                SaveManager.Save(Progress);
+                return;
+            }
+        }
+
+        /* Simple generation */
         if (activeOrders < minActiveOrders)
         {
             int ordersToGenerate = Random.Range(1, maxActiveOrders - activeOrders + 1);

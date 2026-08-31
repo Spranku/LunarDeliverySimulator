@@ -17,6 +17,13 @@ public class MoonBasePanelUI : MonoBehaviour
     public Button expandBaseButton;
     public Button closeButton;
 
+    [Header("Button Labels")]
+    public Text buyRoverLabel;
+    public Text upgradeBatteryLabel;
+    public Text upgradeCapacityLabel;
+    public Text upgradeSpeedLabel;
+    public Text expandBaseLabel;
+
     private MoonBasePoint3D currentBase;
 
     void Start()
@@ -25,21 +32,37 @@ public class MoonBasePanelUI : MonoBehaviour
             closeButton.onClick.AddListener(ClosePanel);
 
         if (buyRoverButton != null)
-            buyRoverButton.onClick.AddListener(() => { currentBase?.BuyRover(); UpdateUI(); });
+            buyRoverButton.onClick.AddListener(() => {
+                currentBase?.BuyRover();
+                UpdateUI();
+            });
 
         if (upgradeBatteryButton != null)
-            upgradeBatteryButton.onClick.AddListener(() => { currentBase?.UpgradeBattery(); UpdateUI(); });
+            upgradeBatteryButton.onClick.AddListener(() => {
+                currentBase?.UpgradeBattery();
+                UpdateUI();
+            });
 
         if (upgradeCapacityButton != null)
-            upgradeCapacityButton.onClick.AddListener(() => { currentBase?.UpgradeCapacity(); UpdateUI(); });
+            upgradeCapacityButton.onClick.AddListener(() => {
+                currentBase?.UpgradeCapacity();
+                UpdateUI();
+            });
 
         if (upgradeSpeedButton != null)
-            upgradeSpeedButton.onClick.AddListener(() => { currentBase?.UpgradeSpeed(); UpdateUI(); });
+            upgradeSpeedButton.onClick.AddListener(() => {
+                currentBase?.UpgradeSpeed();
+                UpdateUI();
+            });
 
         if (expandBaseButton != null)
-            expandBaseButton.onClick.AddListener(() => { currentBase?.ExpandBase(); UpdateUI(); });
+            expandBaseButton.onClick.AddListener(() => {
+                currentBase?.ExpandBase();
+                UpdateUI();
+            });
 
-        panel.SetActive(false);
+        if (panel != null)
+            panel.SetActive(false);
     }
 
     public void ShowBase(MoonBasePoint3D basePoint)
@@ -47,6 +70,10 @@ public class MoonBasePanelUI : MonoBehaviour
         currentBase = basePoint;
         panel.SetActive(true);
         UpdateUI();
+
+        CameraController cam = FindFirstObjectByType<CameraController>();
+        if (cam != null)
+            cam.isUIActive = true;
     }
 
     void UpdateUI()
@@ -60,35 +87,68 @@ public class MoonBasePanelUI : MonoBehaviour
 
         if (statsText != null)
         {
-            statsText.text = $"🚀 Rovers: {stats.roverCount}\n" +
-                             $"🔋 Battery Bonus: +{stats.batteryBonus:F0}%\n" +
-                             $"📦 Capacity Bonus: +{stats.capacityBonus:F0} kg\n" +
-                             $"⚡ Speed Bonus: +{stats.speedBonus:F0}%\n" +
-                             $"📋 Orders: {stats.minOrders}-{stats.maxOrders}";
+            statsText.text = $"Rovers: {stats.roverCount}\n" +
+                             $"Battery: +{stats.batteryBonus:F0}%\n" +
+                             $"Capacity: +{stats.capacityBonus:F0} kg\n" +
+                             $"Speed: +{stats.speedBonus:F0}%\n" +
+                             $"Orders: {stats.minOrders}-{stats.maxOrders}";
         }
 
+        /* Money */
         if (moneyText != null)
-            moneyText.text = $"💰 {stats.money} credits";
+            moneyText.text = $"{stats.money} credits";
+
+        bool canAffordRover = currentBase.CanAfford(currentBase.roverCost);
+        bool canAffordBattery = currentBase.CanAfford(currentBase.batteryUpgradeCost);
+        bool canAffordCapacity = currentBase.CanAfford(currentBase.capacityUpgradeCost);
+        bool canAffordSpeed = currentBase.CanAfford(currentBase.speedUpgradeCost);
+        bool canAffordExpand = currentBase.CanAfford(currentBase.expandBaseCost);
 
         if (buyRoverButton != null)
-            buyRoverButton.interactable = currentBase.CanAfford(currentBase.roverCost);
+        {
+            buyRoverButton.interactable = canAffordRover;
+            if (buyRoverLabel != null)
+                buyRoverLabel.text = $"Buy Rover\n{currentBase.roverCost}";
+        }
 
         if (upgradeBatteryButton != null)
-            upgradeBatteryButton.interactable = currentBase.CanAfford(currentBase.batteryUpgradeCost);
+        {
+            upgradeBatteryButton.interactable = canAffordBattery;
+            if (upgradeBatteryLabel != null)
+                upgradeBatteryLabel.text = $"Upgrade Battery\n{currentBase.batteryUpgradeCost}";
+        }
 
         if (upgradeCapacityButton != null)
-            upgradeCapacityButton.interactable = currentBase.CanAfford(currentBase.capacityUpgradeCost);
+        {
+            upgradeCapacityButton.interactable = canAffordCapacity;
+            if (upgradeCapacityLabel != null)
+                upgradeCapacityLabel.text = $"Upgrade Capacity\n{currentBase.capacityUpgradeCost}";
+        }
 
         if (upgradeSpeedButton != null)
-            upgradeSpeedButton.interactable = currentBase.CanAfford(currentBase.speedUpgradeCost);
+        {
+            upgradeSpeedButton.interactable = canAffordSpeed;
+            if (upgradeSpeedLabel != null)
+                upgradeSpeedLabel.text = $"Upgrade Speed\n{currentBase.speedUpgradeCost}";
+        }
 
         if (expandBaseButton != null)
-            expandBaseButton.interactable = currentBase.CanAfford(currentBase.expandBaseCost);
+        {
+            expandBaseButton.interactable = canAffordExpand;
+            if (expandBaseLabel != null)
+                expandBaseLabel.text = $"Expand Base\n{currentBase.expandBaseCost}";
+        }
     }
 
-    void ClosePanel()
+    public void ClosePanel()
     {
-        panel.SetActive(false);
+        if (panel != null)
+            panel.SetActive(false);
+
+        CameraController cam = FindFirstObjectByType<CameraController>();
+        if (cam != null)
+            cam.isUIActive = false;
+
         currentBase = null;
     }
 }
