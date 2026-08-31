@@ -323,83 +323,118 @@ public class HUDManager : MonoBehaviour
 
         public void UpdateOrdersPanel()
         {
-            Debug.Log("UpdateOrdersPanel called");
+        Debug.Log("UpdateOrdersPanel called");
 
-            var progress = gameManager.GetProgress();
-            if (progress == null) return;
+        var progress = gameManager.GetProgress();
+        if (progress == null) return;
 
-            if (ordersListParent == null)
+        if (ordersListParent == null)
+        {
+            Debug.LogError("ordersListParent is null!");
+            return;
+        }
+
+        if (orderListItemPrefab == null)
+        {
+            Debug.LogError("orderListItemPrefab is null!");
+            return;
+        }
+
+        foreach (Transform child in ordersListParent)
+            Destroy(child.gameObject);
+
+        int count = 0;
+        foreach (var order in progress.Orders)
+        {
+            GameObject item = Instantiate(orderListItemPrefab, ordersListParent);
+
+            Button btn = item.GetComponent<Button>();
+            if (btn == null)
+                btn = item.AddComponent<Button>();
+
+            OrderData localOrder = order;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() => {
+                Debug.Log($"Order clicked in list: {localOrder.Title}");
+                OnOrderListItemClicked(localOrder);
+            });
+
+            CanvasGroup cg = item.GetComponent<CanvasGroup>();
+            if (cg == null)
+                cg = item.AddComponent<CanvasGroup>();
+
+            if (order.IsCompleted || order.IsFailed)
             {
-                Debug.LogError("ordersListParent is null!");
-                return;
+                cg.alpha = 0.5f;
+                btn.interactable = false; 
+            }
+            else
+            {
+                cg.alpha = 1f;
+                btn.interactable = true;
             }
 
-            if (orderListItemPrefab == null)
+            Text titleText = item.transform.Find("TitleText")?.GetComponent<Text>();
+            Text infoText = item.transform.Find("InfoText")?.GetComponent<Text>();
+            Text statusText = item.transform.Find("StatusText")?.GetComponent<Text>();
+
+            if (titleText != null)
+                titleText.text = order.Title;
+
+            if (infoText != null)
+                infoText.text = $"{order.Weight:F0}kg | {order.Reward} credits";
+
+            if (statusText != null)
             {
-                Debug.LogError("orderListItemPrefab is null!");
-                return;
-            }
-
-            foreach (Transform child in ordersListParent)
-                Destroy(child.gameObject);
-
-            int count = 0;
-            foreach (var order in progress.Orders)
-            {
-                GameObject item = Instantiate(orderListItemPrefab, ordersListParent);
-
-                CanvasGroup cg = item.GetComponent<CanvasGroup>();
-                if (cg == null)
-                    cg = item.AddComponent<CanvasGroup>();
-
-                if (order.IsCompleted || order.IsFailed)
+                if (order.IsCompleted)
                 {
-                    cg.alpha = 0.5f;
+                    statusText.text = "✅ Выполнен";
+                    statusText.color = Color.white;
+                }
+                else if (order.IsFailed)
+                {
+                    statusText.text = "❌ Провален";
+                    statusText.color = Color.red;
+                }
+                else if (order.IsBusy)
+                {
+                    statusText.text = "⏳ В пути";
+                    statusText.color = Color.yellow;
                 }
                 else
                 {
-                    cg.alpha = 1f;
+                    statusText.text = "✅ Доступен";
+                    statusText.color = Color.green;
                 }
-
-                Text titleText = item.transform.Find("TitleText")?.GetComponent<Text>();
-                Text infoText = item.transform.Find("InfoText")?.GetComponent<Text>();
-                Text statusText = item.transform.Find("StatusText")?.GetComponent<Text>();
-
-                if (titleText != null)
-                    titleText.text = order.Title;
-
-                if (infoText != null)
-                    infoText.text = $"{order.Weight:F0}kg | {order.Reward} credits";
-
-                if (statusText != null)
-                {
-                    if (order.IsCompleted)
-                    {
-                        statusText.text = "✅ Done";
-                        statusText.color = Color.white;
-                    }
-                    else if (order.IsFailed)
-                    {
-                        statusText.text = "❌ Failed";
-                        statusText.color = Color.red;
-                    }
-                    else if (order.IsBusy)
-                    {
-                        statusText.text = "⏳ In progress";
-                        statusText.color = Color.yellow;
-                    }
-                    else
-                    {
-                        statusText.text = "✅ Open";
-                        statusText.color = Color.green;
-                    }
-                }
-
-                count++;
             }
 
-            Debug.Log($"Orders panel updated: {count} orders");
+            count++;
         }
+
+        Debug.Log($"Orders panel updated: {count} orders");
+    }
+
+    /* ===== ORDER LIST ITEM CLICK ===== */
+
+    void OnOrderListItemClicked(OrderData order)
+    {
+        Debug.Log($"Order list item clicked: {order.Title}");
+
+        if (order == null) return;
+
+        if (order.IsCompleted || order.IsFailed || order.IsBusy)
+        {
+            Debug.Log($"Order {order.Title} is not available");
+            return;
+        }
+
+        CloseOrdersPanel();
+
+        if (gameManager != null)
+        {
+            gameManager.SelectOrder(order);
+        }
+    }
 
     #endregion
 
