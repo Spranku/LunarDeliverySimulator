@@ -459,16 +459,7 @@ public class GameManager3D : MonoBehaviour
     {
         Debug.Log($"Order selected: {order.Title}");
 
-        OrderPoint3D targetPoint = orderPoints.Find(p => p.Order == order);
-        if (targetPoint != null)
-        {
-            CameraController cam = FindFirstObjectByType<CameraController>();
-            if (cam != null)
-            {
-                cam.FocusOnPoint(targetPoint.transform);
-            }
-        }
-
+        /* Show order panel FIRST */
         if (orderPanel != null)
         {
             orderPanel.ShowOrder(order);
@@ -477,6 +468,18 @@ public class GameManager3D : MonoBehaviour
         else
         {
             Debug.LogError("OrderPanel is not assigned in GameManager3D!");
+            return;
+        }
+
+        /* Focus camera on the order point (AFTER panel) */
+        OrderPoint3D targetPoint = orderPoints.Find(p => p.Order == order);
+        if (targetPoint != null)
+        {
+            CameraController cam = FindFirstObjectByType<CameraController>();
+            if (cam != null)
+            {
+                cam.FocusOnPoint(targetPoint.transform);
+            }
         }
     }
 
@@ -529,11 +532,24 @@ public class GameManager3D : MonoBehaviour
         roverVis.onRoverDestroyed = () => {
             Progress.ChangeRating(-10f);
             Progress.TotalDeliveriesFailed++;
+
+            /* Change order status */
             order.IsBusy = false;
+            order.IsFailed = true;
 
             if (targetPoint != null)
             {
                 targetPoint.SetColor(GetOrderColor(order));
+            }
+
+            /* Update UI */
+            if (HUDManager.Instance != null)
+            {
+                HUDManager.Instance.UpdateUI();
+                if (HUDManager.Instance.IsOrdersPanelOpen())
+                {
+                    HUDManager.Instance.UpdateOrdersPanel();
+                }
             }
 
             SaveManager.Save(Progress);
@@ -549,10 +565,22 @@ public class GameManager3D : MonoBehaviour
                 Progress.TotalDeliveriesCompleted++;
                 Progress.ChangeRating(2f);
 
+                order.IsCompleted = true;
+                order.IsBusy = false;
+
                 if (targetPoint != null)
                 {
                     Destroy(targetPoint.gameObject);
                     orderPoints.Remove(targetPoint);
+                }
+
+                if (HUDManager.Instance != null)
+                {
+                    HUDManager.Instance.UpdateUI();
+                    if (HUDManager.Instance.IsOrdersPanelOpen())
+                    {
+                        HUDManager.Instance.UpdateOrdersPanel();
+                    }
                 }
 
                 SaveManager.Save(Progress);
@@ -561,9 +589,7 @@ public class GameManager3D : MonoBehaviour
         };
 
         roverVis.MoveTo(targetPoint.transform, order.Weight);
-
         SaveManager.Save(Progress);
-        Debug.Log($"🚀 Rover {rover.Name} sent to {order.Title}!");
     }
 
     /* ===== REGISTER BASE ===== */
