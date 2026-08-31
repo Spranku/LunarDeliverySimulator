@@ -459,16 +459,7 @@ public class GameManager3D : MonoBehaviour
     {
         Debug.Log($"Order selected: {order.Title}");
 
-        OrderPoint3D targetPoint = orderPoints.Find(p => p.Order == order);
-        if (targetPoint != null)
-        {
-            CameraController cam = FindFirstObjectByType<CameraController>();
-            if (cam != null)
-            {
-                cam.FocusOnPoint(targetPoint.transform);
-            }
-        }
-
+        /* Show order panel FIRST */
         if (orderPanel != null)
         {
             orderPanel.ShowOrder(order);
@@ -477,6 +468,18 @@ public class GameManager3D : MonoBehaviour
         else
         {
             Debug.LogError("OrderPanel is not assigned in GameManager3D!");
+            return;
+        }
+
+        /* Focus camera on the order point (AFTER panel) */
+        OrderPoint3D targetPoint = orderPoints.Find(p => p.Order == order);
+        if (targetPoint != null)
+        {
+            CameraController cam = FindFirstObjectByType<CameraController>();
+            if (cam != null)
+            {
+                cam.FocusOnPoint(targetPoint.transform);
+            }
         }
     }
 

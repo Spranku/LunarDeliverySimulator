@@ -119,7 +119,6 @@ public class OrderPoint3D : MonoBehaviour
     {
         if (Order == null) return;
 
-        /* ===== Dont choice competed or busy order ===== */
         if (Order.IsCompleted || Order.IsBusy)
         {
             Debug.Log($"Order {Order.Title} is already completed or in progress!");
@@ -130,12 +129,6 @@ public class OrderPoint3D : MonoBehaviour
         if (gm != null)
         {
             gm.SelectOrder(Order);
-        }
-
-        var cam = FindFirstObjectByType<CameraController>();
-        if (cam != null)
-        {
-            cam.FocusOnPoint(transform); 
         }
     }
 
