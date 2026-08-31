@@ -1,6 +1,7 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
 
 public class HUDManager : MonoBehaviour
 {
@@ -41,6 +42,16 @@ public class HUDManager : MonoBehaviour
     public GameObject roverStatusItemPrefab;
     public Button roversStatusCloseButton;
 
+    [Header("Settings Panel")]
+    public GameObject settingsPanel;
+    public Text settingsTitleText;
+    public Slider volumeSlider;
+    public Text volumeValueText;
+    public Dropdown resolutionDropdown;
+    public Button exitGameButton;
+    public Button settingsCloseButton;
+    private Resolution[] resolutions;
+
     [Header("Buttons")]
     public Button menuButton;
     public Button ordersButton;
@@ -70,6 +81,42 @@ public class HUDManager : MonoBehaviour
 
     void Start()
     {
+
+        /* Resolution Dropdown */
+        resolutions = Screen.resolutions;
+        Debug.Log($"Resolutions count: {resolutions.Length}");
+
+        if (resolutionDropdown != null)
+        {
+            Debug.Log("ResolutionDropdown found!");
+            resolutionDropdown.ClearOptions();
+            List<string> options = new List<string>();
+            int currentResolutionIndex = 0;
+
+            for (int i = 0; i < resolutions.Length; i++)
+            {
+                string option = resolutions[i].width + "x" + resolutions[i].height;
+                options.Add(option);
+                Debug.Log($"Added resolution: {option}");
+
+                if (resolutions[i].width == Screen.currentResolution.width &&
+                    resolutions[i].height == Screen.currentResolution.height)
+                {
+                    currentResolutionIndex = i;
+                }
+            }
+
+            resolutionDropdown.AddOptions(options);
+            resolutionDropdown.value = currentResolutionIndex;
+            resolutionDropdown.onValueChanged.AddListener(OnResolutionChanged);
+            Debug.Log($"Dropdown populated with {options.Count} options");
+        }
+        else
+        {
+            Debug.LogError("ResolutionDropdown is null!");
+        }
+
+
         if (gameManager == null)
             gameManager = FindFirstObjectByType<GameManager3D>();
 
@@ -94,6 +141,49 @@ public class HUDManager : MonoBehaviour
         {
             roversStatusPanel.SetActive(false);
             Debug.Log("Rovers status panel disabled at start");
+        }
+
+        /* Settings Panel */
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
+
+        if (settingsCloseButton != null)
+            settingsCloseButton.onClick.AddListener(CloseSettingsPanel);
+
+        if (exitGameButton != null)
+            exitGameButton.onClick.AddListener(ExitGame);
+
+        /* Volume Slider */
+        if (volumeSlider != null)
+        {
+            volumeSlider.onValueChanged.AddListener(OnVolumeChanged);
+            volumeSlider.value = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
+            UpdateVolumeText(volumeSlider.value);
+        }
+
+        /* Resolution Dropdown */
+        resolutions = Screen.resolutions;
+        if (resolutionDropdown != null)
+        {
+            resolutionDropdown.ClearOptions();
+            List<string> options = new List<string>();
+            int currentResolutionIndex = 0;
+
+            for (int i = 0; i < resolutions.Length; i++)
+            {
+                string option = resolutions[i].width + "x" + resolutions[i].height;
+                options.Add(option);
+
+                if (resolutions[i].width == Screen.currentResolution.width &&
+                    resolutions[i].height == Screen.currentResolution.height)
+                {
+                    currentResolutionIndex = i;
+                }
+            }
+
+            resolutionDropdown.AddOptions(options);
+            resolutionDropdown.value = currentResolutionIndex;
+            resolutionDropdown.onValueChanged.AddListener(OnResolutionChanged);
         }
 
         if (statsCloseButton != null)
@@ -202,118 +292,118 @@ public class HUDManager : MonoBehaviour
         }
     }
 
-#region ORDERS PANEL
-    public void OpenOrdersPanel()
-    {
-        Debug.Log("OpenOrdersPanel called");
-
-        if (ordersPanel == null)
+    #region ORDERS PANEL
+        public void OpenOrdersPanel()
         {
-            Debug.LogError("ordersPanel is null!");
-            return;
-        }
+            Debug.Log("OpenOrdersPanel called");
 
-        CloseAllSubPanels();
-        UpdateOrdersPanel();
-        ordersPanel.SetActive(true);
-        ShowOverlay();
-
-        Debug.Log($"Orders panel active: {ordersPanel.activeSelf}");
-    }
-
-    public void CloseOrdersPanel()
-    {
-        Debug.Log("CloseOrdersPanel called");
-
-        if (ordersPanel != null)
-            ordersPanel.SetActive(false);
-
-        HideOverlay();
-    }
-
-    public void UpdateOrdersPanel()
-    {
-        Debug.Log("UpdateOrdersPanel called");
-
-        var progress = gameManager.GetProgress();
-        if (progress == null) return;
-
-        if (ordersListParent == null)
-        {
-            Debug.LogError("ordersListParent is null!");
-            return;
-        }
-
-        if (orderListItemPrefab == null)
-        {
-            Debug.LogError("orderListItemPrefab is null!");
-            return;
-        }
-
-        foreach (Transform child in ordersListParent)
-            Destroy(child.gameObject);
-
-        int count = 0;
-        foreach (var order in progress.Orders)
-        {
-            GameObject item = Instantiate(orderListItemPrefab, ordersListParent);
-
-            CanvasGroup cg = item.GetComponent<CanvasGroup>();
-            if (cg == null)
-                cg = item.AddComponent<CanvasGroup>();
-
-            if (order.IsCompleted || order.IsFailed)
+            if (ordersPanel == null)
             {
-                cg.alpha = 0.5f;
-            }
-            else
-            {
-                cg.alpha = 1f;
+                Debug.LogError("ordersPanel is null!");
+                return;
             }
 
-            Text titleText = item.transform.Find("TitleText")?.GetComponent<Text>();
-            Text infoText = item.transform.Find("InfoText")?.GetComponent<Text>();
-            Text statusText = item.transform.Find("StatusText")?.GetComponent<Text>();
+            CloseAllSubPanels();
+            UpdateOrdersPanel();
+            ordersPanel.SetActive(true);
+            ShowOverlay();
 
-            if (titleText != null)
-                titleText.text = order.Title;
+            Debug.Log($"Orders panel active: {ordersPanel.activeSelf}");
+        }
 
-            if (infoText != null)
-                infoText.text = $"{order.Weight:F0}kg | {order.Reward} credits";
+        public void CloseOrdersPanel()
+        {
+            Debug.Log("CloseOrdersPanel called");
 
-            if (statusText != null)
+            if (ordersPanel != null)
+                ordersPanel.SetActive(false);
+
+            HideOverlay();
+        }
+
+        public void UpdateOrdersPanel()
+        {
+            Debug.Log("UpdateOrdersPanel called");
+
+            var progress = gameManager.GetProgress();
+            if (progress == null) return;
+
+            if (ordersListParent == null)
             {
-                if (order.IsCompleted)
+                Debug.LogError("ordersListParent is null!");
+                return;
+            }
+
+            if (orderListItemPrefab == null)
+            {
+                Debug.LogError("orderListItemPrefab is null!");
+                return;
+            }
+
+            foreach (Transform child in ordersListParent)
+                Destroy(child.gameObject);
+
+            int count = 0;
+            foreach (var order in progress.Orders)
+            {
+                GameObject item = Instantiate(orderListItemPrefab, ordersListParent);
+
+                CanvasGroup cg = item.GetComponent<CanvasGroup>();
+                if (cg == null)
+                    cg = item.AddComponent<CanvasGroup>();
+
+                if (order.IsCompleted || order.IsFailed)
                 {
-                    statusText.text = "✅ Done";
-                    statusText.color = Color.white;
-                }
-                else if (order.IsFailed)
-                {
-                    statusText.text = "❌ Failed";
-                    statusText.color = Color.red;
-                }
-                else if (order.IsBusy)
-                {
-                    statusText.text = "⏳ In progress";
-                    statusText.color = Color.yellow;
+                    cg.alpha = 0.5f;
                 }
                 else
                 {
-                    statusText.text = "✅ Open";
-                    statusText.color = Color.green;
+                    cg.alpha = 1f;
                 }
+
+                Text titleText = item.transform.Find("TitleText")?.GetComponent<Text>();
+                Text infoText = item.transform.Find("InfoText")?.GetComponent<Text>();
+                Text statusText = item.transform.Find("StatusText")?.GetComponent<Text>();
+
+                if (titleText != null)
+                    titleText.text = order.Title;
+
+                if (infoText != null)
+                    infoText.text = $"{order.Weight:F0}kg | {order.Reward} credits";
+
+                if (statusText != null)
+                {
+                    if (order.IsCompleted)
+                    {
+                        statusText.text = "✅ Done";
+                        statusText.color = Color.white;
+                    }
+                    else if (order.IsFailed)
+                    {
+                        statusText.text = "❌ Failed";
+                        statusText.color = Color.red;
+                    }
+                    else if (order.IsBusy)
+                    {
+                        statusText.text = "⏳ In progress";
+                        statusText.color = Color.yellow;
+                    }
+                    else
+                    {
+                        statusText.text = "✅ Open";
+                        statusText.color = Color.green;
+                    }
+                }
+
+                count++;
             }
 
-            count++;
+            Debug.Log($"Orders panel updated: {count} orders");
         }
 
-        Debug.Log($"Orders panel updated: {count} orders");
-    }
+    #endregion
 
-#endregion
-
-#region STATS PANEL
+    #region STATS PANEL
 
     public void OpenStatsPanel()
     {
@@ -379,7 +469,7 @@ public class HUDManager : MonoBehaviour
 
 #endregion
 
-#region ROVERS STATUS PANEL
+    #region ROVERS STATUS PANEL
 
     void UpdateRoversStatusPanel()
     {
@@ -464,10 +554,129 @@ public class HUDManager : MonoBehaviour
         HideOverlay();
     }
 
-#endregion
+    #endregion
 
-#region OVERLAY
+    #region SETTINGS PANEL
 
+    public void OpenSettingsPanel()
+    {
+        Debug.Log("OpenSettingsPanel called");
+
+        if (settingsPanel == null)
+        {
+            Debug.LogError("settingsPanel is null!");
+            return;
+        }
+
+        CloseAllSubPanels();
+
+        PopulateResolutionDropdown();
+
+        if (volumeSlider != null)
+        {
+            volumeSlider.value = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
+            UpdateVolumeText(volumeSlider.value);
+        }
+
+        settingsPanel.SetActive(true);
+        ShowOverlay();
+
+        Debug.Log($"Settings panel active: {settingsPanel.activeSelf}");
+    }
+
+    void PopulateResolutionDropdown()
+    {
+        if (resolutionDropdown == null)
+        {
+            Debug.LogError("ResolutionDropdown is null!");
+            return;
+        }
+
+        resolutions = Screen.resolutions;
+
+        if (resolutions == null || resolutions.Length == 0)
+        {
+            Debug.LogWarning("No resolutions found, using test values");
+            resolutions = new Resolution[]
+            {
+            new Resolution { width = 1920, height = 1080 },
+            new Resolution { width = 1280, height = 720 },
+            new Resolution { width = 1024, height = 768 }
+            };
+        }
+
+        resolutionDropdown.ClearOptions();
+        List<string> options = new List<string>();
+        int currentResolutionIndex = 0;
+
+        for (int i = 0; i < resolutions.Length; i++)
+        {
+            string option = resolutions[i].width + "x" + resolutions[i].height;
+            options.Add(option);
+
+            if (resolutions[i].width == Screen.currentResolution.width &&
+                resolutions[i].height == Screen.currentResolution.height)
+            {
+                currentResolutionIndex = i;
+            }
+        }
+
+        resolutionDropdown.AddOptions(options);
+        resolutionDropdown.value = currentResolutionIndex;
+
+        Debug.Log($"Dropdown populated with {options.Count} options");
+    }
+
+    public void CloseSettingsPanel()
+    {
+        Debug.Log("CloseSettingsPanel called");
+
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
+
+        HideOverlay();
+    }
+
+    /* ===== SETTINGS EVENTS ===== */
+
+    void UpdateVolumeText(float value)
+    {
+        if (volumeValueText != null)
+            volumeValueText.text = $"{Mathf.RoundToInt(value * 100)}%";
+    }
+
+    public void OnVolumeChanged(float value)
+    {
+        AudioListener.volume = value;
+        PlayerPrefs.SetFloat("MasterVolume", value);
+        PlayerPrefs.Save();
+        UpdateVolumeText(value);
+        Debug.Log($"Volume: {Mathf.RoundToInt(value * 100)}%");
+    }
+
+    public void OnResolutionChanged(int index)
+    {
+        if (resolutions == null || index >= resolutions.Length) return;
+
+        Resolution resolution = resolutions[index];
+        Screen.SetResolution(resolution.width, resolution.height, Screen.fullScreen);
+        Debug.Log($"Resolution: {resolution.width}x{resolution.height}");
+    }
+
+    public void ExitGame()
+    {
+        Debug.Log("Exit game");
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+    Application.Quit();
+#endif
+    }
+
+    #endregion
+
+    #region OVERLAY
 
     public void ShowOverlay()
     {
@@ -485,8 +694,9 @@ public class HUDManager : MonoBehaviour
         bool statsOpen = statsPanel != null && statsPanel.activeSelf;
         bool roversStatusOpen = roversStatusPanel != null && roversStatusPanel.activeSelf;
         bool ordersOpen = ordersPanel != null && ordersPanel.activeSelf;
+        bool settingsOpen = settingsPanel != null && settingsPanel.activeSelf;
 
-        if (!menuOpen && !orderOpen && !statsOpen && !roversStatusOpen && !ordersOpen)
+        if (!menuOpen && !orderOpen && !statsOpen && !roversStatusOpen && !ordersOpen && !settingsOpen)
         {
             if (sharedOverlay != null && sharedOverlay.activeSelf)
             {
@@ -498,7 +708,7 @@ public class HUDManager : MonoBehaviour
 
     #endregion
 
-#region MENU
+    #region MENU
 
     void ToggleMenu()
     {
@@ -587,47 +797,56 @@ public class HUDManager : MonoBehaviour
         if (statsPanel != null) statsPanel.SetActive(false);
         if (roversStatusPanel != null) roversStatusPanel.SetActive(false);
         if (ordersPanel != null) ordersPanel.SetActive(false);
+        if (settingsPanel != null) settingsPanel.SetActive(false);
     }
 
-#region BUTTON HANDLERS
+    #region BUTTON HANDLERS
 
-    void OnOverlayClick()
-    {
-        if (statsPanel != null && statsPanel.activeSelf)
+        void OnOverlayClick()
         {
-            CloseStatsPanel();
-            return;
-        }
+            if (statsPanel != null && statsPanel.activeSelf)
+            {
+                CloseStatsPanel();
+                return;
+            }
 
-        if (roversStatusPanel != null && roversStatusPanel.activeSelf)
-        {
-            CloseRoversStatusPanel();
-            return;
-        }
+            if (roversStatusPanel != null && roversStatusPanel.activeSelf)
+            {
+                CloseRoversStatusPanel();
+                return;
+            }
 
-        if (ordersPanel != null && ordersPanel.activeSelf)
-        {
-            CloseOrdersPanel();
-            return;
-        }
+            if (ordersPanel != null && ordersPanel.activeSelf)
+            {
+                CloseOrdersPanel();
+                return;
+            }
+
+            if (settingsPanel != null && settingsPanel.activeSelf)
+            {
+                CloseSettingsPanel();
+                return;
+            }
 
         if (isMenuOpen)
+            {
+                CloseMenu();
+            }
+        }
+
+        void OnOrdersClick()
         {
+            Debug.Log("Orders button clicked");
+            OpenOrdersPanel();
             CloseMenu();
         }
-    }
 
-    void OnOrdersClick()
-    {
-        Debug.Log("Orders button clicked");
-        OpenOrdersPanel();
-        CloseMenu();
-    }
+        void OnSettingsClick()
+        {
+            Debug.Log("Settings button clicked");
+            OpenSettingsPanel();
+            CloseMenu();
+        }
 
-    void OnSettingsClick()
-    {
-        Debug.Log("Settings button clicked");
-    }
-#endregion
-
+    #endregion
 }
