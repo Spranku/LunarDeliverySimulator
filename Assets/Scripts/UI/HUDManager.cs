@@ -16,6 +16,13 @@ public class HUDManager : MonoBehaviour
     public Text ratingText;
     public Text roversStatusText;
 
+    [Header("Orders Panel")]
+    public GameObject ordersPanel;
+    public Text ordersTitleText;
+    public Transform ordersListParent;
+    public GameObject orderListItemPrefab;
+    public Button ordersCloseButton;
+
     [Header("Stats Panel")]
     public GameObject statsPanel;
     public Text statsTitleText;
@@ -67,6 +74,13 @@ public class HUDManager : MonoBehaviour
             gameManager = FindFirstObjectByType<GameManager3D>();
 
         orderPanel = FindFirstObjectByType<OrderPanelUI>();
+
+        /* Orders Panel */
+        if (ordersPanel != null)
+            ordersPanel.SetActive(false);
+
+        if (ordersCloseButton != null)
+            ordersCloseButton.onClick.AddListener(CloseOrdersPanel);
 
         /* Stats Panel */
         if (statsPanel != null)
@@ -188,7 +202,118 @@ public class HUDManager : MonoBehaviour
         }
     }
 
-    /* ===== STATS PANEL ===== */
+#region ORDERS PANEL
+    public void OpenOrdersPanel()
+    {
+        Debug.Log("OpenOrdersPanel called");
+
+        if (ordersPanel == null)
+        {
+            Debug.LogError("ordersPanel is null!");
+            return;
+        }
+
+        CloseAllSubPanels();
+        UpdateOrdersPanel();
+        ordersPanel.SetActive(true);
+        ShowOverlay();
+
+        Debug.Log($"Orders panel active: {ordersPanel.activeSelf}");
+    }
+
+    public void CloseOrdersPanel()
+    {
+        Debug.Log("CloseOrdersPanel called");
+
+        if (ordersPanel != null)
+            ordersPanel.SetActive(false);
+
+        HideOverlay();
+    }
+
+    public void UpdateOrdersPanel()
+    {
+        Debug.Log("UpdateOrdersPanel called");
+
+        var progress = gameManager.GetProgress();
+        if (progress == null) return;
+
+        if (ordersListParent == null)
+        {
+            Debug.LogError("ordersListParent is null!");
+            return;
+        }
+
+        if (orderListItemPrefab == null)
+        {
+            Debug.LogError("orderListItemPrefab is null!");
+            return;
+        }
+
+        foreach (Transform child in ordersListParent)
+            Destroy(child.gameObject);
+
+        int count = 0;
+        foreach (var order in progress.Orders)
+        {
+            GameObject item = Instantiate(orderListItemPrefab, ordersListParent);
+
+            CanvasGroup cg = item.GetComponent<CanvasGroup>();
+            if (cg == null)
+                cg = item.AddComponent<CanvasGroup>();
+
+            if (order.IsCompleted || order.IsFailed)
+            {
+                cg.alpha = 0.5f;
+            }
+            else
+            {
+                cg.alpha = 1f;
+            }
+
+            Text titleText = item.transform.Find("TitleText")?.GetComponent<Text>();
+            Text infoText = item.transform.Find("InfoText")?.GetComponent<Text>();
+            Text statusText = item.transform.Find("StatusText")?.GetComponent<Text>();
+
+            if (titleText != null)
+                titleText.text = order.Title;
+
+            if (infoText != null)
+                infoText.text = $"{order.Weight:F0}kg | {order.Reward} credits";
+
+            if (statusText != null)
+            {
+                if (order.IsCompleted)
+                {
+                    statusText.text = "✅ Done";
+                    statusText.color = Color.white;
+                }
+                else if (order.IsFailed)
+                {
+                    statusText.text = "❌ Failed";
+                    statusText.color = Color.red;
+                }
+                else if (order.IsBusy)
+                {
+                    statusText.text = "⏳ In progress";
+                    statusText.color = Color.yellow;
+                }
+                else
+                {
+                    statusText.text = "✅ Open";
+                    statusText.color = Color.green;
+                }
+            }
+
+            count++;
+        }
+
+        Debug.Log($"Orders panel updated: {count} orders");
+    }
+
+#endregion
+
+#region STATS PANEL
 
     public void OpenStatsPanel()
     {
@@ -231,28 +356,30 @@ public class HUDManager : MonoBehaviour
         }
 
         if (statsTitleText != null)
-            statsTitleText.text = "📊 Stats";
+            statsTitleText.text = "Stats";
 
         if (statsTotalOrdersText != null)
-            statsTotalOrdersText.text = $"📦 Total Orders: {total}";
+            statsTotalOrdersText.text = $"Total Orders: {total}";
 
         if (statsCompletedText != null)
-            statsCompletedText.text = $"✅ Completed: {progress.TotalDeliveriesCompleted}";
+            statsCompletedText.text = $"Completed: {progress.TotalDeliveriesCompleted}";
 
         if (statsFailedText != null)
-            statsFailedText.text = $"❌ Failed: {progress.TotalDeliveriesFailed}";
+            statsFailedText.text = $"Failed: {progress.TotalDeliveriesFailed}";
 
         if (statsMoneyEarnedText != null)
-            statsMoneyEarnedText.text = $"💰 Money Earned: {progress.Money}";
+            statsMoneyEarnedText.text = $"Money Earned: {progress.Money}";
 
         if (statsRoversLostText != null)
-            statsRoversLostText.text = $"💀 Rovers Lost: {roversLost}";
+            statsRoversLostText.text = $"Rovers Lost: {roversLost}";
 
         if (statsDaysSurvivedText != null)
-            statsDaysSurvivedText.text = $"📅 Days Survived: {progress.Day}";
+            statsDaysSurvivedText.text = $"Days Survived: {progress.Day}";
     }
 
-    /* ===== ROVERS STATUS PANEL ===== */
+#endregion
+
+#region ROVERS STATUS PANEL
 
     void UpdateRoversStatusPanel()
     {
@@ -337,35 +464,10 @@ public class HUDManager : MonoBehaviour
         HideOverlay();
     }
 
-    void CloseAllSubPanels()
-    {
-        if (statsPanel != null) statsPanel.SetActive(false);
-        if (roversStatusPanel != null) roversStatusPanel.SetActive(false);
-    }
+#endregion
 
-    /* ===== OVERLAY ===== */
+#region OVERLAY
 
-    void OnOverlayClick()
-    {
-        Debug.Log("Overlay clicked");
-
-        if (statsPanel != null && statsPanel.activeSelf)
-        {
-            CloseStatsPanel();
-            return;
-        }
-
-        if (roversStatusPanel != null && roversStatusPanel.activeSelf)
-        {
-            CloseRoversStatusPanel();
-            return;
-        }
-
-        if (isMenuOpen)
-        {
-            CloseMenu();
-        }
-    }
 
     public void ShowOverlay()
     {
@@ -382,8 +484,9 @@ public class HUDManager : MonoBehaviour
         bool orderOpen = orderPanel != null && orderPanel.IsPanelOpen();
         bool statsOpen = statsPanel != null && statsPanel.activeSelf;
         bool roversStatusOpen = roversStatusPanel != null && roversStatusPanel.activeSelf;
+        bool ordersOpen = ordersPanel != null && ordersPanel.activeSelf;
 
-        if (!menuOpen && !orderOpen && !statsOpen && !roversStatusOpen)
+        if (!menuOpen && !orderOpen && !statsOpen && !roversStatusOpen && !ordersOpen)
         {
             if (sharedOverlay != null && sharedOverlay.activeSelf)
             {
@@ -393,7 +496,9 @@ public class HUDManager : MonoBehaviour
         }
     }
 
-    /* ===== MENU ===== */
+    #endregion
+
+#region MENU
 
     void ToggleMenu()
     {
@@ -463,6 +568,13 @@ public class HUDManager : MonoBehaviour
         animCoroutine = null;
     }
 
+    #endregion
+
+    public bool IsOrdersPanelOpen()
+    {
+        return ordersPanel != null && ordersPanel.activeSelf;
+    }
+
     void HideMenuImmediate()
     {
         if (menuPanel != null)
@@ -470,15 +582,52 @@ public class HUDManager : MonoBehaviour
         HideOverlay();
     }
 
-    /* ===== BUTTON HANDLERS ===== */
+    void CloseAllSubPanels()
+    {
+        if (statsPanel != null) statsPanel.SetActive(false);
+        if (roversStatusPanel != null) roversStatusPanel.SetActive(false);
+        if (ordersPanel != null) ordersPanel.SetActive(false);
+    }
+
+#region BUTTON HANDLERS
+
+    void OnOverlayClick()
+    {
+        if (statsPanel != null && statsPanel.activeSelf)
+        {
+            CloseStatsPanel();
+            return;
+        }
+
+        if (roversStatusPanel != null && roversStatusPanel.activeSelf)
+        {
+            CloseRoversStatusPanel();
+            return;
+        }
+
+        if (ordersPanel != null && ordersPanel.activeSelf)
+        {
+            CloseOrdersPanel();
+            return;
+        }
+
+        if (isMenuOpen)
+        {
+            CloseMenu();
+        }
+    }
 
     void OnOrdersClick()
     {
         Debug.Log("Orders button clicked");
+        OpenOrdersPanel();
+        CloseMenu();
     }
 
     void OnSettingsClick()
     {
         Debug.Log("Settings button clicked");
     }
+#endregion
+
 }
