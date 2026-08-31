@@ -17,9 +17,6 @@ public class GameManager3D : MonoBehaviour
     public GameObject roverPrefab;
     public Transform roverParent;
 
-    [Header("Base")]
-    public GameObject basePrefab;
-
     [Header("UI")]
     public OrderPanelUI orderPanel;
 
@@ -35,6 +32,11 @@ public class GameManager3D : MonoBehaviour
     public Text messageText;     
     public Button restartButton;
     public Button exitButton;
+
+    [Header("Base")]
+    public GameObject basePrefab;
+    public MoonBasePanelUI basePanel;  
+    private MoonBasePoint3D currentBasePoint;
 
     private List<OrderPoint3D> orderPoints = new List<OrderPoint3D>();
     private List<RoverVisual> roverVisuals = new List<RoverVisual>();
@@ -98,7 +100,7 @@ public class GameManager3D : MonoBehaviour
         }
     }
 
-    /* ===== BASE SETUP ===== */
+    #region BASE SETUP
 
     void SetupBase()
     {
@@ -118,9 +120,39 @@ public class GameManager3D : MonoBehaviour
             currentBase = baseObject.AddComponent<BasePoint>();
     }
 
-    /* ===== ROVERS ===== */
+    public void SelectBase(MoonBasePoint3D basePoint)
+    {
+        Debug.Log($"Selected base: {basePoint.baseName}");
 
-    void VisualizeRovers()
+        if (basePanel != null)
+        {
+            basePanel.ShowBase(basePoint);
+        }
+    }
+
+    public void VisualizeBase()
+    {
+        if (basePrefab == null || moonSurface == null) return;
+
+        Vector3 baseDirection = new Vector3(0, 1, 0).normalized;
+        float radius = moonSurface.localScale.x * 0.5f;
+        float offset = 0.15f;
+        Vector3 basePosition = moonSurface.position + baseDirection * (radius + offset);
+
+        GameObject baseObject = Instantiate(basePrefab, moonSurface);
+        baseObject.transform.position = basePosition;
+        baseObject.transform.LookAt(moonSurface.position);
+
+        currentBasePoint = baseObject.GetComponent<MoonBasePoint3D>();
+        if (currentBasePoint == null)
+            currentBasePoint = baseObject.AddComponent<MoonBasePoint3D>();
+    }
+
+    #endregion
+
+    #region ROVERS
+
+    public void VisualizeRovers()
     {
         foreach (var visual in roverVisuals)
         {
@@ -153,7 +185,9 @@ public class GameManager3D : MonoBehaviour
         }
     }
 
-    /* ===== ORDERS ===== */
+    #endregion
+
+    #region ORDERS
 
     void GenerateOrders(int count)
     {
@@ -247,8 +281,9 @@ public class GameManager3D : MonoBehaviour
         }
     }
 
-    /* ===== DAY CYCLE ===== */
+    #endregion
 
+    #region DAY CYCLE
     void CheckAndGenerateOrders()
     {
         int activeOrders = 0;
@@ -348,8 +383,9 @@ public class GameManager3D : MonoBehaviour
         }
     }
 
-    /* ===== GAME STATE ===== */
+    #endregion
 
+    #region GAME STATE
     public void CheckGameState()
     {
         int aliveRovers = 0;
@@ -439,6 +475,7 @@ public class GameManager3D : MonoBehaviour
         Debug.Log("Back to menu");
     }
 
+    #endregion
 
     /* ===== EXIT ===== */
     public void ExitGame()

@@ -1471,8 +1471,7 @@ Transform:
   m_LocalPosition: {x: 0, y: -0, z: 0}
   m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 728041591}
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &278139038
@@ -3726,37 +3725,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 723970532}
   m_CullTransparentMesh: 1
---- !u!1 &728041590
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 728041591}
-  m_Layer: 0
-  m_Name: Base
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &728041591
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 728041590}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.23744667, y: 0.26891667, z: -0.3482867}
-  m_LocalScale: {x: 0.33333334, y: 0.33333334, z: 0.33333334}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 278139037}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &759202490
 GameObject:
   m_ObjectHideFlags: 0
@@ -5701,7 +5669,6 @@ MonoBehaviour:
   orderPointPrefab3D: {fileID: 6384344738874657956, guid: 50fc6fc54376ccd46897cca937973c5a, type: 3}
   roverPrefab: {fileID: 7456551589063529306, guid: d4e06959acf06cb4fa3cad758a1b85f7, type: 3}
   roverParent: {fileID: 1549859635}
-  basePrefab: {fileID: 8684015264733397528, guid: 4c553cd0bd9537e44b5b031e1dd0e2b5, type: 3}
   orderPanel: {fileID: 914257110}
   dayDuration: 60
   minActiveOrders: 3
@@ -5712,6 +5679,8 @@ MonoBehaviour:
   messageText: {fileID: 676118232}
   restartButton: {fileID: 1743455309}
   exitButton: {fileID: 1589655055}
+  basePrefab: {fileID: 8640076204573598168, guid: 5ae7f742fdf2a7143ab701cd2cf9d8bc, type: 3}
+  basePanel: {fileID: 0}
 --- !u!4 &1177409258
 Transform:
   m_ObjectHideFlags: 0
