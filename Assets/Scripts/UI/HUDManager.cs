@@ -720,7 +720,6 @@ public class HUDManager : MonoBehaviour
 
         if (basePanel != null && basePanel.panel != null && basePanel.panel.activeSelf)
         {
-            basePanel.ClosePanel();
             return;
         }
 
