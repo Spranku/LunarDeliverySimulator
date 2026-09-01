@@ -4,8 +4,13 @@ public class OrderPoint3D : MonoBehaviour
 {
     public OrderData Order { get; private set; }
 
-    [Header("Visual")]
-    public float alpha = 0.6f;
+    [Header("Colors")]
+    public Color activeLowColor = new Color(0f, 1f, 0f, 0.6f);
+    public Color activeMediumColor = new Color(1f, 1f, 0f, 0.6f);
+    public Color activeHighColor = new Color(1f, 0f, 0f, 0.6f);
+    public Color busyColor = new Color(1f, 0.5f, 0f, 0.6f);
+    public Color completedColor = new Color(0.2f, 0.8f, 0.2f, 0.3f);
+    public Color failedColor = new Color(0.8f, 0.2f, 0.2f, 0.3f);
 
     [Header("Position")]
     public float surfaceOffset = 0.3f;
@@ -18,7 +23,6 @@ public class OrderPoint3D : MonoBehaviour
 
     private SphereCollider sphereCollider;
     private Renderer myRenderer;
-    private Material materialInstance;
     private CameraController cameraController;
 
     void Awake()
@@ -31,17 +35,12 @@ public class OrderPoint3D : MonoBehaviour
         sphereCollider.isTrigger = true;
 
         myRenderer = GetComponent<Renderer>();
-        if (myRenderer != null)
-        {
-            Shader shader = Shader.Find("Unlit/Color");
-            if (shader == null)
-                shader = Shader.Find("Standard");
-
-            materialInstance = new Material(shader);
-            myRenderer.material = materialInstance;
-        }
-
         cameraController = FindFirstObjectByType<CameraController>();
+
+        if (myRenderer != null && myRenderer.material != null)
+        {
+            Debug.Log($"Material: {myRenderer.material.name}, Shader: {myRenderer.material.shader.name}");
+        }
     }
 
     public void Initialize(OrderData order, Transform moonSurface)
@@ -84,28 +83,36 @@ public class OrderPoint3D : MonoBehaviour
 
     public void SetColor(Color color)
     {
-        if (materialInstance != null)
+        if (myRenderer != null && myRenderer.material != null)
         {
-            color.a = alpha;
-            materialInstance.color = color;
+            myRenderer.material.color = color;
         }
     }
 
     void UpdateColor()
     {
-        if (materialInstance == null || Order == null) return;
+        if (myRenderer == null || myRenderer.material == null || Order == null) return;
 
         Color color = Color.white;
 
-        switch (Order.ZoneType)
+        if (Order.IsBusy)
+            color = busyColor;
+        else if (Order.IsCompleted)
+            color = completedColor;
+        else if (Order.IsFailed)
+            color = failedColor;
+        else
         {
-            case "Low": color = Color.green; break;
-            case "Medium": color = Color.yellow; break;
-            case "High": color = Color.red; break;
+            switch (Order.ZoneType)
+            {
+                case "Low": color = activeLowColor; break;
+                case "Medium": color = activeMediumColor; break;
+                case "High": color = activeHighColor; break;
+            }
         }
 
-        color.a = alpha;
-        materialInstance.color = color;
+        myRenderer.material.color = color;
+        Debug.Log($"Point {Order.Title}: {color}");
     }
 
     void OnMouseDown()
@@ -115,11 +122,5 @@ public class OrderPoint3D : MonoBehaviour
 
         GameManager3D gm = FindFirstObjectByType<GameManager3D>();
         gm?.SelectOrder(Order);
-    }
-
-    void OnDestroy()
-    {
-        if (materialInstance != null)
-            Destroy(materialInstance);
     }
 }

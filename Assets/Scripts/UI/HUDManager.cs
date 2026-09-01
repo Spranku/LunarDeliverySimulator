@@ -85,6 +85,11 @@ public class HUDManager : MonoBehaviour
 
     void Start()
     {
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
+
+        AutoSetResolution();
+
         if (basePanel == null)
             basePanel = FindFirstObjectByType<MoonBasePanelUI>();
 
@@ -701,6 +706,16 @@ public class HUDManager : MonoBehaviour
     #endregion
 
     #region Helpers
+
+    void AutoSetResolution()
+    {
+        int width = Screen.currentResolution.width;
+        int height = Screen.currentResolution.height;
+
+        Screen.SetResolution(width, height, FullScreenMode.FullScreenWindow);
+
+        Debug.Log($"Resolution set to: {width}x{height}");
+    }
 
     void CloseAllSubPanels()
     {

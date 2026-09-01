@@ -47,15 +47,22 @@ public class GameManager3D : MonoBehaviour
 
     void Awake()
     {
-        if (SaveManager.SaveExists())
+        SaveManager.DeleteSave(); // TEMP!!
+
+        if (!SaveManager.SaveExists())
         {
-            Progress = SaveManager.Load();
-            Debug.Log("Game loaded!");
+            Progress = new GameProgress();
+            Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
+            Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
+            Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
+            GenerateOrders(5);
+            SaveManager.Save(Progress);
+            Debug.Log("First launch: New game created!");
         }
         else
         {
-            Progress = new GameProgress();
-            Debug.Log("New game created!");
+            Progress = SaveManager.Load();
+            Debug.Log("Game loaded!");
         }
 
         if (Progress.Rovers.Count == 0)
@@ -233,7 +240,7 @@ public class GameManager3D : MonoBehaviour
             script.Initialize(order, moonSurface);
 
             if (order.IsBusy)
-                script.SetColor(Color.gray);
+                script.SetColor(Color.orange);
 
             orderPoints.Add(script);
         }
@@ -255,7 +262,7 @@ public class GameManager3D : MonoBehaviour
             }
             else if (point.Order.IsBusy)
             {
-                point.SetColor(Color.gray);
+                point.SetColor(Color.orange);
             }
         }
     }
@@ -388,7 +395,7 @@ public class GameManager3D : MonoBehaviour
                 Progress.ChangeRating(-5f);
 
                 var point = orderPoints.Find(p => p.Order == order);
-                point?.SetColor(Color.gray);
+                point?.SetColor(Color.orange);
             }
         }
 
@@ -528,7 +535,7 @@ public class GameManager3D : MonoBehaviour
         }
 
         orderPanel?.ClosePanel();
-        targetPoint.SetColor(Color.gray);
+        targetPoint.SetColor(Color.orange);
 
         roverVis.onRoverDestroyed = () =>
         {
