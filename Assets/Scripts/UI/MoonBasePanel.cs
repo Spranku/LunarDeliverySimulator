@@ -25,38 +25,46 @@ public class MoonBasePanelUI : MonoBehaviour
     public Text expandBaseLabel;
 
     private MoonBasePoint3D currentBase;
+    private HUDManager hudManager;
 
     void Start()
     {
+        hudManager = FindFirstObjectByType<HUDManager>();
+
         if (closeButton != null)
             closeButton.onClick.AddListener(ClosePanel);
 
         if (buyRoverButton != null)
-            buyRoverButton.onClick.AddListener(() => {
+            buyRoverButton.onClick.AddListener(() =>
+            {
                 currentBase?.BuyRover();
                 UpdateUI();
             });
 
         if (upgradeBatteryButton != null)
-            upgradeBatteryButton.onClick.AddListener(() => {
+            upgradeBatteryButton.onClick.AddListener(() =>
+            {
                 currentBase?.UpgradeBattery();
                 UpdateUI();
             });
 
         if (upgradeCapacityButton != null)
-            upgradeCapacityButton.onClick.AddListener(() => {
+            upgradeCapacityButton.onClick.AddListener(() =>
+            {
                 currentBase?.UpgradeCapacity();
                 UpdateUI();
             });
 
         if (upgradeSpeedButton != null)
-            upgradeSpeedButton.onClick.AddListener(() => {
+            upgradeSpeedButton.onClick.AddListener(() =>
+            {
                 currentBase?.UpgradeSpeed();
                 UpdateUI();
             });
 
         if (expandBaseButton != null)
-            expandBaseButton.onClick.AddListener(() => {
+            expandBaseButton.onClick.AddListener(() =>
+            {
                 currentBase?.ExpandBase();
                 UpdateUI();
             });
@@ -67,13 +75,49 @@ public class MoonBasePanelUI : MonoBehaviour
 
     public void ShowBase(MoonBasePoint3D basePoint)
     {
+        if (basePoint == null) return;
+
+        gameObject.SetActive(true);
         currentBase = basePoint;
+
+        if (panel == null)
+        {
+            Debug.LogError("Panel is null in ShowBase!");
+            return;
+        }
+
         panel.SetActive(true);
-        UpdateUI();
+
+        if (hudManager != null)
+            hudManager.ShowOverlay();
 
         CameraController cam = FindFirstObjectByType<CameraController>();
         if (cam != null)
             cam.isUIActive = true;
+
+        UpdateUI();
+    }
+
+    public void ClosePanel()
+    {
+        if (panel == null || !panel.activeSelf)
+            return;
+
+        panel.SetActive(false);
+
+        if (hudManager != null)
+            hudManager.HideOverlay();
+
+        CameraController cam = FindFirstObjectByType<CameraController>();
+        if (cam != null)
+        {
+            if (cam.IsFocusing())
+                cam.ExitFocusMode();
+
+            cam.isUIActive = false;
+        }
+
+        currentBase = null;
     }
 
     void UpdateUI()
@@ -94,7 +138,6 @@ public class MoonBasePanelUI : MonoBehaviour
                              $"Orders: {stats.minOrders}-{stats.maxOrders}";
         }
 
-        /* Money */
         if (moneyText != null)
             moneyText.text = $"{stats.money} credits";
 
@@ -138,17 +181,5 @@ public class MoonBasePanelUI : MonoBehaviour
             if (expandBaseLabel != null)
                 expandBaseLabel.text = $"Expand Base\n{currentBase.expandBaseCost}";
         }
-    }
-
-    public void ClosePanel()
-    {
-        if (panel != null)
-            panel.SetActive(false);
-
-        CameraController cam = FindFirstObjectByType<CameraController>();
-        if (cam != null)
-            cam.isUIActive = false;
-
-        currentBase = null;
     }
 }
