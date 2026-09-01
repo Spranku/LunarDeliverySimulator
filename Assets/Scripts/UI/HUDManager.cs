@@ -61,6 +61,7 @@ public class HUDManager : MonoBehaviour
     public Button statusButton;
     public Button statsButton;
     public Button settingsButton;
+    public Button moonBaseButton;
 
     [Header("Menu")]
     public GameObject menuPanel;
@@ -114,6 +115,9 @@ public class HUDManager : MonoBehaviour
         if (settingsButton != null)
             settingsButton.onClick.AddListener(() => { OpenSettingsPanel(); CloseMenu(); });
 
+        if (moonBaseButton != null)
+            moonBaseButton.onClick.AddListener(() => { FocusOnBase(); CloseMenu(); });
+
         UpdateUI();
     }
 
@@ -121,6 +125,19 @@ public class HUDManager : MonoBehaviour
     {
         if (Time.frameCount % 30 == 0)
             UpdateUI();
+    }
+
+    void FocusOnBase()
+    {
+        MoonBasePoint3D basePoint = FindFirstObjectByType<MoonBasePoint3D>();
+        if (basePoint == null)
+        {
+            Debug.LogWarning("MoonBase not found!");
+            return;
+        }
+
+        if (gameManager != null)
+            gameManager.SelectBase(basePoint);
     }
 
     #region UI Update
