@@ -17,9 +17,6 @@ public class GameManager3D : MonoBehaviour
     public GameObject roverPrefab;
     public Transform roverParent;
 
-    [Header("Base")]
-    public GameObject basePrefab;
-
     [Header("UI")]
     public OrderPanelUI orderPanel;
 
@@ -31,10 +28,14 @@ public class GameManager3D : MonoBehaviour
 
     [Header("UI Panels")]
     public GameObject gameResultPanel;
-    public Text infoText;        
-    public Text messageText;     
+    public Text infoText;
+    public Text messageText;
     public Button restartButton;
     public Button exitButton;
+
+    [Header("Base")]
+    public GameObject basePrefab;
+    public MoonBasePanelUI basePanel;
 
     private List<OrderPoint3D> orderPoints = new List<OrderPoint3D>();
     private List<RoverVisual> roverVisuals = new List<RoverVisual>();
@@ -53,17 +54,13 @@ public class GameManager3D : MonoBehaviour
         Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
 
         if (Progress.Orders.Count == 0)
-        {
             GenerateOrders(5);
-        }
 
         SetupBase();
         VisualizeOrders();
         VisualizeRovers();
 
         dayTimer = dayDuration;
-        generationTimer = 0f;
-
         CheckGameState();
     }
 
@@ -84,8 +81,8 @@ public class GameManager3D : MonoBehaviour
         if (isDayEnding) return;
 
         dayTimer -= Time.deltaTime;
-
         generationTimer += Time.deltaTime;
+
         if (generationTimer >= orderGenerationInterval)
         {
             generationTimer = 0f;
@@ -93,39 +90,48 @@ public class GameManager3D : MonoBehaviour
         }
 
         if (dayTimer <= 0f)
-        {
             StartCoroutine(EndDay());
-        }
     }
 
-    /* ===== BASE SETUP ===== */
+    #region Base
 
     void SetupBase()
     {
         if (basePrefab == null || moonSurface == null) return;
 
-        Vector3 baseDirection = new Vector3(0, 1, 0).normalized;
+        Vector3 direction = Vector3.up;
         float radius = moonSurface.localScale.x * 0.5f;
-        float offset = 0.02f;
-        Vector3 basePosition = moonSurface.position + baseDirection * (radius + offset);
+        Vector3 position = moonSurface.position + direction * (radius + 0.02f);
 
-        GameObject baseObject = Instantiate(basePrefab, moonSurface);
-        baseObject.transform.position = basePosition;
-        baseObject.transform.LookAt(moonSurface.position);
+        GameObject baseObj = Instantiate(basePrefab, moonSurface);
+        baseObj.transform.position = position;
+        baseObj.transform.LookAt(moonSurface.position);
 
-        currentBase = baseObject.GetComponent<BasePoint>();
+        currentBase = baseObj.GetComponent<BasePoint>();
         if (currentBase == null)
-            currentBase = baseObject.AddComponent<BasePoint>();
+            currentBase = baseObj.AddComponent<BasePoint>();
     }
 
-    /* ===== ROVERS ===== */
-
-    void VisualizeRovers()
+    public void SelectBase(MoonBasePoint3D basePoint)
     {
-        foreach (var visual in roverVisuals)
-        {
-            if (visual != null) Destroy(visual.gameObject);
-        }
+        CameraController cam = FindFirstObjectByType<CameraController>();
+        cam?.FocusOnPoint(basePoint.transform);
+
+        if (basePanel != null)
+            basePanel.ShowBase(basePoint);
+        else
+            Debug.LogError("BasePanel is not assigned!");
+    }
+
+    #endregion
+
+    #region Rovers
+
+    public void VisualizeRovers()
+    {
+        foreach (var v in roverVisuals)
+            if (v != null) Destroy(v.gameObject);
+
         roverVisuals.Clear();
 
         if (currentBase == null)
@@ -140,20 +146,21 @@ public class GameManager3D : MonoBehaviour
         {
             if (rover.IsDestroyed) continue;
 
-            GameObject roverGO = Instantiate(roverPrefab, roverParent);
-            RoverVisual visual = roverGO.GetComponent<RoverVisual>();
-
+            GameObject go = Instantiate(roverPrefab, roverParent);
+            RoverVisual visual = go.GetComponent<RoverVisual>();
             if (visual == null)
-                visual = roverGO.AddComponent<RoverVisual>();
+                visual = go.AddComponent<RoverVisual>();
 
             rover.CurrentPosition = basePos;
             visual.Initialize(rover, moonSurface, basePos);
             roverVisuals.Add(visual);
-            roverGO.SetActive(false);
+            go.SetActive(false);
         }
     }
 
-    /* ===== ORDERS ===== */
+    #endregion
+
+    #region Orders
 
     void GenerateOrders(int count)
     {
@@ -163,12 +170,12 @@ public class GameManager3D : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             string zone = zones[Random.Range(0, zones.Length)];
-            float risk = zone == "Low" ? 0.1f : (zone == "Medium" ? 0.4f : 0.8f);
+            float risk = zone == "Low" ? 0.1f : zone == "Medium" ? 0.4f : 0.8f;
 
             Progress.Orders.Add(new OrderData(
                 titles[Random.Range(0, titles.Length)],
                 Random.Range(10f, 80f),
-                Random.Range(50, 300),
+                Random.Range(70, 400),
                 Random.Range(1, 5),
                 Vector2.zero,
                 zone,
@@ -180,37 +187,38 @@ public class GameManager3D : MonoBehaviour
 
     void VisualizeOrders()
     {
+        // Remove orphaned points
         for (int i = orderPoints.Count - 1; i >= 0; i--)
         {
-            if (orderPoints[i] == null) continue;
+            if (orderPoints[i] == null)
+            {
+                orderPoints.RemoveAt(i);
+                continue;
+            }
 
             OrderData order = orderPoints[i].Order;
-            if (order == null) continue;
-
-            if (order.IsCompleted || order.IsFailed)
+            if (order == null || !Progress.Orders.Contains(order))
             {
-                Destroy(orderPoints[i].gameObject);
+                if (orderPoints[i].gameObject != null)
+                    Destroy(orderPoints[i].gameObject);
                 orderPoints.RemoveAt(i);
             }
         }
 
+        // Create new points
         foreach (var order in Progress.Orders)
         {
             if (order.IsCompleted || order.IsFailed) continue;
-
-            bool exists = orderPoints.Exists(p => p.Order == order);
-            if (exists) continue;
+            if (orderPoints.Exists(p => p.Order == order)) continue;
 
             GameObject point = Instantiate(orderPointPrefab3D, moonSurface);
-            OrderPoint3D pointScript = point.GetComponent<OrderPoint3D>();
-            pointScript.Initialize(order, moonSurface);
+            OrderPoint3D script = point.GetComponent<OrderPoint3D>();
+            script.Initialize(order, moonSurface);
 
             if (order.IsBusy)
-            {
-                pointScript.SetColor(Color.gray);
-            }
+                script.SetColor(Color.gray);
 
-            orderPoints.Add(pointScript);
+            orderPoints.Add(script);
         }
     }
 
@@ -221,17 +229,16 @@ public class GameManager3D : MonoBehaviour
             if (orderPoints[i] == null) continue;
 
             OrderPoint3D point = orderPoints[i];
-            if (point != null && point.Order != null)
+            if (point.Order == null) continue;
+
+            if (point.Order.IsCompleted || point.Order.IsFailed)
             {
-                if (point.Order.IsCompleted || point.Order.IsFailed)
-                {
-                    Destroy(point.gameObject);
-                    orderPoints.RemoveAt(i);
-                }
-                else if (point.Order.IsBusy)
-                {
-                    point.SetColor(Color.gray);
-                }
+                Destroy(point.gameObject);
+                orderPoints.RemoveAt(i);
+            }
+            else if (point.Order.IsBusy)
+            {
+                point.SetColor(Color.gray);
             }
         }
     }
@@ -247,7 +254,30 @@ public class GameManager3D : MonoBehaviour
         }
     }
 
-    /* ===== DAY CYCLE ===== */
+    public void CleanupCompletedOrders()
+    {
+        int removed = 0;
+
+        for (int i = Progress.Orders.Count - 1; i >= 0; i--)
+        {
+            var order = Progress.Orders[i];
+            if (order.IsCompleted || order.IsFailed)
+            {
+                Progress.Orders.RemoveAt(i);
+                removed++;
+            }
+        }
+
+        if (removed > 0)
+        {
+            SaveManager.Save(Progress);
+            VisualizeOrders();
+        }
+    }
+
+    #endregion
+
+    #region Day Cycle
 
     void CheckAndGenerateOrders()
     {
@@ -255,83 +285,98 @@ public class GameManager3D : MonoBehaviour
         foreach (var order in Progress.Orders)
         {
             if (!order.IsCompleted && !order.IsFailed && !order.IsBusy)
-            {
                 activeOrders++;
+        }
+
+        // Soft lock check
+        if (activeOrders > 0 && !HasDeliverableOrder())
+        {
+            Debug.LogWarning("No deliverable orders found! Regenerating...");
+
+            for (int i = Progress.Orders.Count - 1; i >= 0; i--)
+            {
+                var order = Progress.Orders[i];
+                if (!order.IsCompleted && !order.IsFailed && !order.IsBusy)
+                    Progress.Orders.RemoveAt(i);
             }
+
+            GenerateOrders(minActiveOrders);
+            VisualizeOrders();
+            SaveManager.Save(Progress);
+            return;
         }
 
         if (activeOrders < minActiveOrders)
         {
-            int ordersToGenerate = Random.Range(1, maxActiveOrders - activeOrders + 1);
-            if (ordersToGenerate < 1) ordersToGenerate = 1;
+            int toGenerate = Random.Range(1, maxActiveOrders - activeOrders + 1);
+            if (toGenerate < 1) toGenerate = 1;
 
-            Debug.Log($"📦 Generating {ordersToGenerate} new orders (active: {activeOrders}/{minActiveOrders})");
-            GenerateOrders(ordersToGenerate);
+            GenerateOrders(toGenerate);
             VisualizeOrders();
         }
+    }
+
+    bool HasDeliverableOrder()
+    {
+        foreach (var order in Progress.Orders)
+        {
+            if (order.IsCompleted || order.IsFailed || order.IsBusy) continue;
+
+            foreach (var rover in Progress.Rovers)
+            {
+                if (rover.IsDestroyed || rover.IsBusy) continue;
+                if (rover.CargoCapacity >= order.Weight && rover.CurrentBattery >= order.Weight * 0.5f)
+                    return true;
+            }
+        }
+        return false;
     }
 
     IEnumerator EndDay()
     {
         isDayEnding = true;
 
-        Debug.Log($"=== DAY {Progress.Day} ENDING ===");
-
         CheckOverdueOrders();
+        CleanupCompletedOrders();
         Progress.Day++;
         ChargeRovers();
         CheckGameState();
 
         SaveManager.Save(Progress);
-
-        if (HUDManager.Instance != null)
-        {
-            HUDManager.Instance.UpdateUI();
-        }
+        HUDManager.Instance?.UpdateUI();
 
         dayTimer = dayDuration;
         generationTimer = 0f;
         isDayEnding = false;
-
-        Debug.Log($"=== DAY {Progress.Day} STARTED ===");
 
         yield return null;
     }
 
     void CheckOverdueOrders()
     {
-        int overdueCount = 0;
+        int count = 0;
 
         for (int i = Progress.Orders.Count - 1; i >= 0; i--)
         {
-            OrderData order = Progress.Orders[i];
-
-            if (order.IsCompleted || order.IsFailed) continue;
-            if (order.IsBusy) continue;
+            var order = Progress.Orders[i];
+            if (order.IsCompleted || order.IsFailed || order.IsBusy) continue;
 
             if (order.IsOverdue(Progress.Day))
             {
-                overdueCount++;
+                count++;
                 order.IsFailed = true;
 
                 int penalty = Mathf.RoundToInt(order.Reward * 0.2f);
                 Progress.AddMoney(-penalty);
                 Progress.ChangeRating(-5f);
 
-                OrderPoint3D point = orderPoints.Find(p => p.Order == order);
-                if (point != null)
-                {
-                    point.SetColor(Color.gray);
-                }
-
-                Debug.Log($"Order '{order.Title}' overdue! Penalty: -{penalty} credits, -5 rating");
+                var point = orderPoints.Find(p => p.Order == order);
+                point?.SetColor(Color.gray);
             }
         }
 
-        if (overdueCount > 0)
-        {
-            Debug.Log($"Total overdue orders: {overdueCount}");
-        }
+        if (count > 0)
+            Debug.Log($"Total overdue orders: {count}");
     }
 
     void ChargeRovers()
@@ -340,92 +385,60 @@ public class GameManager3D : MonoBehaviour
         {
             if (rover.IsDestroyed) continue;
 
-            float chargeAmount = rover.MaxBattery * 0.2f;
-            rover.ChargeBattery(chargeAmount);
+            rover.ChargeBattery(rover.MaxBattery * 0.2f);
             rover.IsBusy = false;
-
-            Debug.Log($"Rover {rover.Name} charged to {rover.CurrentBattery:F0}/{rover.MaxBattery:F0}");
         }
     }
 
-    /* ===== GAME STATE ===== */
+    #endregion
+
+    #region Game State
 
     public void CheckGameState()
     {
-        int aliveRovers = 0;
+        int alive = 0;
         foreach (var rover in Progress.Rovers)
         {
-            if (!rover.IsDestroyed) aliveRovers++;
+            if (!rover.IsDestroyed) alive++;
         }
 
-        if (aliveRovers == 0)
-        {
-            Debug.Log("💀 GAME OVER: All rovers destroyed!");
-            ShowGameOver("All rovers have been destroyed!\nBase operations failed.");
-            return;
-        }
-
-        if (Progress.BaseRating <= 0)
-        {
-            Debug.Log("💀 GAME OVER: Base rating reached 0!");
-            ShowGameOver("Base rating dropped to 0!\nThe base has fallen.");
-            return;
-        }
-
-        if (Progress.Money < 0)
-        {
-            Debug.Log("💀 GAME OVER: Money is negative!");
-            ShowGameOver("Bankruptcy!\nNo funds to operate.");
-            return;
-        }
-
-        if (Progress.BaseRating >= 100f)
-        {
-            Debug.Log("🎉 VICTORY: Base rating reached 100%!");
-            ShowVictory("Base rating reached 100%!\nYou are the best lunar commander!");
-            return;
-        }
-
-        if (Progress.Money >= 10000)
-        {
-            Debug.Log("🎉 VICTORY: Money reached 10000 credits!");
-            ShowVictory("You earned 10000 credits!\nA true lunar tycoon!");
-            return;
-        }
+        if (alive == 0)
+            ShowGameOver("All rovers have been destroyed!");
+        else if (Progress.BaseRating <= 0)
+            ShowGameOver("Base rating dropped to 0!");
+        else if (Progress.Money < 0)
+            ShowGameOver("Bankruptcy! No funds to operate.");
+        else if (Progress.BaseRating >= 100f)
+            ShowVictory("Base rating reached 100%!");
+        else if (Progress.Money >= 10000)
+            ShowVictory("You earned 10000 credits!");
     }
 
-    void ShowGameOver(string message)
+    void ShowGameOver(string msg)
     {
         if (gameResultPanel != null)
         {
             gameResultPanel.SetActive(true);
-            if (infoText != null)
-                infoText.text = "💀 GAME OVER";
-            if (messageText != null)
-                messageText.text = message;
+            if (infoText != null) infoText.text = "💀 GAME OVER";
+            if (messageText != null) messageText.text = msg;
         }
-
         Time.timeScale = 0f;
     }
 
-    void ShowVictory(string message)
+    void ShowVictory(string msg)
     {
         if (gameResultPanel != null)
         {
             gameResultPanel.SetActive(true);
-            if (infoText != null)
-                infoText.text = "🎉 VICTORY!";
-            if (messageText != null)
-                messageText.text = message;
+            if (infoText != null) infoText.text = "🎉 VICTORY!";
+            if (messageText != null) messageText.text = msg;
         }
-
         Time.timeScale = 0f;
     }
 
     public void RestartGame()
     {
         Time.timeScale = 1f;
-
         if (gameResultPanel != null)
             gameResultPanel.SetActive(false);
 
@@ -433,57 +446,31 @@ public class GameManager3D : MonoBehaviour
             UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
     }
 
-    public void BackToMenu()
-    {
-        Time.timeScale = 1f;
-        Debug.Log("Back to menu");
-    }
-
-
-    /* ===== EXIT ===== */
     public void ExitGame()
     {
         Time.timeScale = 1f;
-        Debug.Log("Exit game");
-
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #else
-    Application.Quit();
+        Application.Quit();
 #endif
     }
 
-    /* ===== SELECT ORDER ===== */
+    #endregion
+
+    #region Order Selection & Delivery
 
     public void SelectOrder(OrderData order)
     {
-        Debug.Log($"Order selected: {order.Title}");
-
-        /* Show order panel FIRST */
-        if (orderPanel != null)
-        {
-            orderPanel.ShowOrder(order);
-            Debug.Log("Order panel ShowOrder called!");
-        }
-        else
-        {
-            Debug.LogError("OrderPanel is not assigned in GameManager3D!");
-            return;
-        }
-
-        /* Focus camera on the order point (AFTER panel) */
-        OrderPoint3D targetPoint = orderPoints.Find(p => p.Order == order);
-        if (targetPoint != null)
+        var point = orderPoints.Find(p => p.Order == order);
+        if (point != null)
         {
             CameraController cam = FindFirstObjectByType<CameraController>();
-            if (cam != null)
-            {
-                cam.FocusOnPoint(targetPoint.transform);
-            }
+            cam?.FocusOnPoint(point.transform);
         }
-    }
 
-    /* ===== START DELIVERY ===== */
+        orderPanel?.ShowOrder(order);
+    }
 
     public void StartDelivery(RoverData rover, OrderData order)
     {
@@ -519,90 +506,64 @@ public class GameManager3D : MonoBehaviour
             cam.isUIActive = false;
         }
 
-        if (orderPanel != null && orderPanel.IsPanelOpen())
-        {
-            orderPanel.ClosePanel();
-        }
+        orderPanel?.ClosePanel();
+        targetPoint.SetColor(Color.gray);
 
-        if (targetPoint != null)
+        roverVis.onRoverDestroyed = () =>
         {
-            targetPoint.SetColor(Color.gray);
-        }
-
-        roverVis.onRoverDestroyed = () => {
             Progress.ChangeRating(-10f);
             Progress.TotalDeliveriesFailed++;
 
-            /* Change order status */
             order.IsBusy = false;
             order.IsFailed = true;
+            targetPoint.SetColor(GetOrderColor(order));
 
-            if (targetPoint != null)
-            {
-                targetPoint.SetColor(GetOrderColor(order));
-            }
-
-            /* Update UI */
-            if (HUDManager.Instance != null)
-            {
-                HUDManager.Instance.UpdateUI();
-                if (HUDManager.Instance.IsOrdersPanelOpen())
-                {
-                    HUDManager.Instance.UpdateOrdersPanel();
-                }
-            }
+            HUDManager.Instance?.UpdateUI();
+            if (HUDManager.Instance.IsOrdersPanelOpen())
+                HUDManager.Instance.UpdateOrdersPanel();
 
             SaveManager.Save(Progress);
-            Debug.Log($"💀 Rover lost! Rating -10");
-
             CheckGameState();
         };
 
-        roverVis.onDeliveryComplete = () => {
-            if (!rover.IsDestroyed)
+        roverVis.onDeliveryComplete = () =>
+        {
+            if (rover.IsDestroyed) return;
+
+            Progress.AddMoney(order.Reward);
+            Progress.TotalDeliveriesCompleted++;
+            Progress.ChangeRating(2f);
+
+            order.IsCompleted = true;
+            order.IsBusy = false;
+
+            if (targetPoint != null)
             {
-                Progress.AddMoney(order.Reward);
-                Progress.TotalDeliveriesCompleted++;
-                Progress.ChangeRating(2f);
-
-                order.IsCompleted = true;
-                order.IsBusy = false;
-
-                if (targetPoint != null)
-                {
-                    Destroy(targetPoint.gameObject);
-                    orderPoints.Remove(targetPoint);
-                }
-
-                if (HUDManager.Instance != null)
-                {
-                    HUDManager.Instance.UpdateUI();
-                    if (HUDManager.Instance.IsOrdersPanelOpen())
-                    {
-                        HUDManager.Instance.UpdateOrdersPanel();
-                    }
-                }
-
-                SaveManager.Save(Progress);
-                Debug.Log($"✅ Delivery complete! +{order.Reward} credits, +2 rating");
+                Destroy(targetPoint.gameObject);
+                orderPoints.Remove(targetPoint);
             }
+
+            HUDManager.Instance?.UpdateUI();
+            if (HUDManager.Instance.IsOrdersPanelOpen())
+                HUDManager.Instance.UpdateOrdersPanel();
+
+            SaveManager.Save(Progress);
         };
 
         roverVis.MoveTo(targetPoint.transform, order.Weight);
         SaveManager.Save(Progress);
     }
 
-    /* ===== REGISTER BASE ===== */
+    #endregion
+
+    #region Helpers
 
     public void RegisterBase(BasePoint basePoint)
     {
         currentBase = basePoint;
     }
 
-    /* ===== GET PROGRESS ===== */
+    public GameProgress GetProgress() => Progress;
 
-    public GameProgress GetProgress()
-    {
-        return Progress;
-    }
+    #endregion
 }

@@ -3,8 +3,6 @@
 public class OrderPoint3D : MonoBehaviour
 {
     public OrderData Order { get; private set; }
-    private SphereCollider sphereCollider;
-    private Renderer myRenderer;
 
     [Header("Visual")]
     public float alpha = 0.6f;
@@ -18,32 +16,29 @@ public class OrderPoint3D : MonoBehaviour
     public float maxDistanceForScale = 10f;
     public float minDistanceForScale = 1.8f;
 
+    private SphereCollider sphereCollider;
+    private Renderer myRenderer;
+    private Material materialInstance;
     private CameraController cameraController;
 
     void Awake()
     {
         sphereCollider = GetComponent<SphereCollider>();
-        myRenderer = GetComponent<Renderer>();
-
         if (sphereCollider == null)
             sphereCollider = gameObject.AddComponent<SphereCollider>();
 
         sphereCollider.radius = 0.5f;
         sphereCollider.isTrigger = true;
 
+        myRenderer = GetComponent<Renderer>();
         if (myRenderer != null)
         {
-            var shader = Shader.Find("Unlit/Color");
-            if (shader != null)
-            {
-                Material mat = new Material(shader);
-                myRenderer.material = mat;
-            }
-            else
-            {
-                Material mat = new Material(Shader.Find("Standard"));
-                myRenderer.material = mat;
-            }
+            Shader shader = Shader.Find("Unlit/Color");
+            if (shader == null)
+                shader = Shader.Find("Standard");
+
+            materialInstance = new Material(shader);
+            myRenderer.material = materialInstance;
         }
 
         cameraController = FindFirstObjectByType<CameraController>();
@@ -52,7 +47,6 @@ public class OrderPoint3D : MonoBehaviour
     public void Initialize(OrderData order, Transform moonSurface)
     {
         Order = order;
-        Debug.Log($"📍 Point {order.Title}: zone={order.ZoneType}, risk={order.Risk * 100:F0}%");
 
         Vector3 direction = Random.onUnitSphere;
         float moonRadius = moonSurface.localScale.x * 0.5f;
@@ -61,31 +55,14 @@ public class OrderPoint3D : MonoBehaviour
         transform.position = worldPosition;
         transform.rotation = Quaternion.LookRotation(direction);
 
-        if (myRenderer != null && myRenderer.material != null)
-        {
-            Color color = Color.white;
-
-            switch (Order.ZoneType)
-            {
-                case "Low": color = Color.green; break;
-                case "Medium": color = Color.yellow; break;
-                case "High": color = Color.red; break;
-                default: color = Color.white; break;
-            }
-
-            color.a = alpha;
-            myRenderer.material.color = color;
-        }
-
+        UpdateColor();
         UpdateScale(10f);
     }
 
     void Update()
     {
         if (cameraController != null)
-        {
             UpdateScale(cameraController.distance);
-        }
         else
         {
             Camera mainCamera = Camera.main;
@@ -107,34 +84,42 @@ public class OrderPoint3D : MonoBehaviour
 
     public void SetColor(Color color)
     {
-        if (myRenderer != null && myRenderer.material != null)
+        if (materialInstance != null)
         {
             color.a = alpha;
-            myRenderer.material.color = color;
-            Debug.Log($"Point {Order?.Title} color changed to {color}");
+            materialInstance.color = color;
         }
+    }
+
+    void UpdateColor()
+    {
+        if (materialInstance == null || Order == null) return;
+
+        Color color = Color.white;
+
+        switch (Order.ZoneType)
+        {
+            case "Low": color = Color.green; break;
+            case "Medium": color = Color.yellow; break;
+            case "High": color = Color.red; break;
+        }
+
+        color.a = alpha;
+        materialInstance.color = color;
     }
 
     void OnMouseDown()
     {
-        if (Order == null) return;
-
-        if (Order.IsCompleted || Order.IsBusy)
-        {
-            Debug.Log($"Order {Order.Title} is already completed or in progress!");
+        if (Order == null || Order.IsCompleted || Order.IsBusy)
             return;
-        }
 
-        var gm = FindFirstObjectByType<GameManager3D>();
-        if (gm != null)
-        {
-            gm.SelectOrder(Order);
-        }
+        GameManager3D gm = FindFirstObjectByType<GameManager3D>();
+        gm?.SelectOrder(Order);
     }
 
     void OnDestroy()
     {
-        if (myRenderer != null && myRenderer.material != null)
-            Destroy(myRenderer.material);
+        if (materialInstance != null)
+            Destroy(materialInstance);
     }
 }
