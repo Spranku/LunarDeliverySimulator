@@ -48,6 +48,7 @@ public class HUDManager : MonoBehaviour
     public Slider volumeSlider;
     public Dropdown resolutionDropdown;
     public Button exitGameButton;
+    public Button newGameButton;
     public Button settingsCloseButton;
     private Resolution[] resolutions;
 
@@ -440,11 +441,22 @@ public class HUDManager : MonoBehaviour
         if (exitGameButton != null)
             exitGameButton.onClick.AddListener(ExitGame);
 
+        if(newGameButton != null)
+            newGameButton.onClick.AddListener(NewGame);
+
         if (volumeSlider != null)
         {
             volumeSlider.onValueChanged.AddListener(OnVolumeChanged);
             volumeSlider.value = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
         }
+    }
+
+    public void NewGame()
+    {
+        SaveManager.DeleteSave();
+        UnityEngine.SceneManagement.SceneManager.LoadScene(
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex
+        );
     }
 
     void InitResolutionDropdown()

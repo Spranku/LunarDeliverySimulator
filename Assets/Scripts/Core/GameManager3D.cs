@@ -47,14 +47,31 @@ public class GameManager3D : MonoBehaviour
 
     void Awake()
     {
-        Progress = new GameProgress();
+        if (SaveManager.SaveExists())
+        {
+            Progress = SaveManager.Load();
+            Debug.Log("Game loaded!");
+        }
+        else
+        {
+            Progress = new GameProgress();
+            Debug.Log("New game created!");
+        }
 
-        Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
-        Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
-        Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
+        if (Progress.Rovers.Count == 0)
+        {
+            Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
+            Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
+            Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
+            SaveManager.Save(Progress);
+        }
 
+        
         if (Progress.Orders.Count == 0)
+        {
             GenerateOrders(5);
+            SaveManager.Save(Progress);
+        }
 
         SetupBase();
         VisualizeOrders();
@@ -439,11 +456,15 @@ public class GameManager3D : MonoBehaviour
     public void RestartGame()
     {
         Time.timeScale = 1f;
+
+        SaveManager.DeleteSave();
+
         if (gameResultPanel != null)
             gameResultPanel.SetActive(false);
 
         UnityEngine.SceneManagement.SceneManager.LoadScene(
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex
+        );
     }
 
     public void ExitGame()
