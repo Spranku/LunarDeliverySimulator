@@ -16,8 +16,8 @@ public class OrderData
     public bool IsFailed;            /* Is order failed */
     public int DayCreated;           /* Day of order created */
     public int DayDeadline;          /* Deadline */
+    public bool IsBusy;
 
-    // Конструктор
     public OrderData(string title, float weight, int reward, int urgency,
                      Vector2 targetPosition, string zoneType, float risk, int dayCreated)
     {
@@ -32,7 +32,18 @@ public class OrderData
         IsCompleted = false;
         IsFailed = false;
         DayCreated = dayCreated;
-        DayDeadline = dayCreated + urgency; /* if level of order high - deadline is less */ 
+        DayDeadline = dayCreated + urgency; /* if level of order high - deadline is less */
+        IsBusy = false;
+    }
+
+    public string WeightCategory
+    {
+        get
+        {
+            if (Weight < 20f) return "Light";
+            if (Weight < 50f) return "Medium";
+            return "Heavy";
+        }
     }
 
     /* Check dedaline */
