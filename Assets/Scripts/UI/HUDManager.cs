@@ -46,9 +46,9 @@ public class HUDManager : MonoBehaviour
     public GameObject settingsPanel;
     public Text settingsTitleText;
     public Slider volumeSlider;
-    public Text volumeValueText;
     public Dropdown resolutionDropdown;
     public Button exitGameButton;
+    public Button newGameButton;
     public Button settingsCloseButton;
     private Resolution[] resolutions;
 
@@ -85,6 +85,11 @@ public class HUDManager : MonoBehaviour
 
     void Start()
     {
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
+
+        AutoSetResolution();
+
         if (basePanel == null)
             basePanel = FindFirstObjectByType<MoonBasePanelUI>();
 
@@ -152,10 +157,10 @@ public class HUDManager : MonoBehaviour
             dayText.text = $"Day {progress.Day}";
 
         if (moneyText != null)
-            moneyText.text = $"💰 {progress.Money}";
+            moneyText.text = $"{progress.Money}";
 
         if (ratingText != null)
-            ratingText.text = $"⭐ {progress.BaseRating:F0}%";
+            ratingText.text = $"{progress.BaseRating:F0}%";
 
         if (roversStatusText != null)
         {
@@ -221,7 +226,6 @@ public class HUDManager : MonoBehaviour
         foreach (Transform child in ordersListParent)
             Destroy(child.gameObject);
 
-        int count = 0;
         foreach (var order in progress.Orders)
         {
             GameObject item = Instantiate(orderListItemPrefab, ordersListParent);
@@ -273,8 +277,6 @@ public class HUDManager : MonoBehaviour
                     statusText.color = Color.green;
                 }
             }
-
-            count++;
         }
     }
 
@@ -401,7 +403,6 @@ public class HUDManager : MonoBehaviour
         foreach (Transform child in roversStatusListParent)
             Destroy(child.gameObject);
 
-        int count = 0;
         foreach (var rover in progress.Rovers)
         {
             if (rover.IsDestroyed) continue;
@@ -414,21 +415,19 @@ public class HUDManager : MonoBehaviour
             Text statusText = item.transform.Find("InfoRow/StatusText")?.GetComponent<Text>();
 
             if (nameText != null)
-                nameText.text = $"🚀 {rover.Name}";
+                nameText.text = $"{rover.Name}";
 
             if (batteryText != null)
-                batteryText.text = $"🔋 {rover.CurrentBattery:F0}/{rover.MaxBattery:F0}";
+                batteryText.text = $"{rover.CurrentBattery:F0}/{rover.MaxBattery:F0}";
 
             if (capacityText != null)
-                capacityText.text = $"📦 {rover.CargoCapacity} kg";
+                capacityText.text = $"{rover.CargoCapacity} kg";
 
             if (statusText != null)
             {
-                statusText.text = rover.IsBusy ? "⏳ Busy" : "✅ Idle";
+                statusText.text = rover.IsBusy ? "Busy" : "Idle";
                 statusText.color = rover.IsBusy ? Color.yellow : Color.green;
             }
-
-            count++;
         }
     }
 
@@ -447,12 +446,22 @@ public class HUDManager : MonoBehaviour
         if (exitGameButton != null)
             exitGameButton.onClick.AddListener(ExitGame);
 
+        if(newGameButton != null)
+            newGameButton.onClick.AddListener(NewGame);
+
         if (volumeSlider != null)
         {
             volumeSlider.onValueChanged.AddListener(OnVolumeChanged);
             volumeSlider.value = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
-            UpdateVolumeText(volumeSlider.value);
         }
+    }
+
+    public void NewGame()
+    {
+        SaveManager.DeleteSave();
+        UnityEngine.SceneManagement.SceneManager.LoadScene(
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex
+        );
     }
 
     void InitResolutionDropdown()
@@ -500,8 +509,9 @@ public class HUDManager : MonoBehaviour
 
         if (volumeSlider != null)
         {
-            volumeSlider.value = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
-            UpdateVolumeText(volumeSlider.value);
+            float savedVolume = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
+            volumeSlider.value = savedVolume;
+            AudioManager.Instance?.SetVolume(savedVolume);
         }
 
         settingsPanel.SetActive(true);
@@ -516,18 +526,9 @@ public class HUDManager : MonoBehaviour
         HideOverlay();
     }
 
-    void UpdateVolumeText(float value)
-    {
-        if (volumeValueText != null)
-            volumeValueText.text = $"{Mathf.RoundToInt(value * 100)}%";
-    }
-
     public void OnVolumeChanged(float value)
     {
-        AudioListener.volume = value;
-        PlayerPrefs.SetFloat("MasterVolume", value);
-        PlayerPrefs.Save();
-        UpdateVolumeText(value);
+        AudioManager.Instance?.SetVolume(value);
     }
 
     public void OnResolutionChanged(int index)
@@ -651,7 +652,7 @@ public class HUDManager : MonoBehaviour
         }
     }
 
-    void CloseMenu()
+    public void CloseMenu()
     {
         if (!isMenuOpen) return;
         isMenuOpen = false;
@@ -706,6 +707,16 @@ public class HUDManager : MonoBehaviour
 
     #region Helpers
 
+    void AutoSetResolution()
+    {
+        int width = Screen.currentResolution.width;
+        int height = Screen.currentResolution.height;
+
+        Screen.SetResolution(width, height, FullScreenMode.FullScreenWindow);
+
+        Debug.Log($"Resolution set to: {width}x{height}");
+    }
+
     void CloseAllSubPanels()
     {
         if (statsPanel != null) statsPanel.SetActive(false);
@@ -728,9 +739,6 @@ public class HUDManager : MonoBehaviour
 
     void OnOverlayClick()
     {
-        if (basePanel != null && basePanel.panel != null && basePanel.panel.activeSelf)
-            return;
-
         if (orderPanel != null && orderPanel.IsPanelOpen())
         {
             orderPanel.ClosePanel();
@@ -739,7 +747,6 @@ public class HUDManager : MonoBehaviour
 
         if (basePanel != null && basePanel.panel != null && basePanel.panel.activeSelf)
         {
-            basePanel.ClosePanel();
             return;
         }
 
