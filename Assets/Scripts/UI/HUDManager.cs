@@ -48,6 +48,7 @@ public class HUDManager : MonoBehaviour
     public Slider volumeSlider;
     public Dropdown resolutionDropdown;
     public Button exitGameButton;
+    public Button newGameButton;
     public Button settingsCloseButton;
     private Resolution[] resolutions;
 
@@ -84,6 +85,11 @@ public class HUDManager : MonoBehaviour
 
     void Start()
     {
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
+
+        AutoSetResolution();
+
         if (basePanel == null)
             basePanel = FindFirstObjectByType<MoonBasePanelUI>();
 
@@ -440,11 +446,22 @@ public class HUDManager : MonoBehaviour
         if (exitGameButton != null)
             exitGameButton.onClick.AddListener(ExitGame);
 
+        if(newGameButton != null)
+            newGameButton.onClick.AddListener(NewGame);
+
         if (volumeSlider != null)
         {
             volumeSlider.onValueChanged.AddListener(OnVolumeChanged);
             volumeSlider.value = PlayerPrefs.GetFloat("MasterVolume", 0.8f);
         }
+    }
+
+    public void NewGame()
+    {
+        SaveManager.DeleteSave();
+        UnityEngine.SceneManagement.SceneManager.LoadScene(
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex
+        );
     }
 
     void InitResolutionDropdown()
@@ -689,6 +706,16 @@ public class HUDManager : MonoBehaviour
     #endregion
 
     #region Helpers
+
+    void AutoSetResolution()
+    {
+        int width = Screen.currentResolution.width;
+        int height = Screen.currentResolution.height;
+
+        Screen.SetResolution(width, height, FullScreenMode.FullScreenWindow);
+
+        Debug.Log($"Resolution set to: {width}x{height}");
+    }
 
     void CloseAllSubPanels()
     {

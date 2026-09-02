@@ -47,14 +47,38 @@ public class GameManager3D : MonoBehaviour
 
     void Awake()
     {
-        Progress = new GameProgress();
+        //SaveManager.DeleteSave(); // TEMP
 
-        Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
-        Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
-        Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
-
-        if (Progress.Orders.Count == 0)
+        if (!SaveManager.SaveExists())
+        {
+            Progress = new GameProgress();
+            Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
+            Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
+            Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
             GenerateOrders(5);
+            SaveManager.Save(Progress);
+            Debug.Log("First launch: New game created!");
+        }
+        else
+        {
+            Progress = SaveManager.Load();
+            Debug.Log("Game loaded!");
+        }
+
+        if (Progress.Rovers.Count == 0)
+        {
+            Progress.Rovers.Add(new RoverData("Lunar-1", 100f, 50f, 1f));
+            Progress.Rovers.Add(new RoverData("Lunar-2", 80f, 30f, 1.5f));
+            Progress.Rovers.Add(new RoverData("Bigfoot", 150f, 100f, 0.7f));
+            SaveManager.Save(Progress);
+        }
+
+        
+        if (Progress.Orders.Count == 0)
+        {
+            GenerateOrders(5);
+            SaveManager.Save(Progress);
+        }
 
         SetupBase();
         VisualizeOrders();
@@ -216,7 +240,7 @@ public class GameManager3D : MonoBehaviour
             script.Initialize(order, moonSurface);
 
             if (order.IsBusy)
-                script.SetColor(Color.gray);
+                script.SetColor(Color.orange);
 
             orderPoints.Add(script);
         }
@@ -238,7 +262,7 @@ public class GameManager3D : MonoBehaviour
             }
             else if (point.Order.IsBusy)
             {
-                point.SetColor(Color.gray);
+                point.SetColor(Color.orange);
             }
         }
     }
@@ -371,7 +395,7 @@ public class GameManager3D : MonoBehaviour
                 Progress.ChangeRating(-5f);
 
                 var point = orderPoints.Find(p => p.Order == order);
-                point?.SetColor(Color.gray);
+                point?.SetColor(Color.orange);
             }
         }
 
@@ -439,11 +463,15 @@ public class GameManager3D : MonoBehaviour
     public void RestartGame()
     {
         Time.timeScale = 1f;
+
+        SaveManager.DeleteSave();
+
         if (gameResultPanel != null)
             gameResultPanel.SetActive(false);
 
         UnityEngine.SceneManagement.SceneManager.LoadScene(
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex
+        );
     }
 
     public void ExitGame()
@@ -507,7 +535,7 @@ public class GameManager3D : MonoBehaviour
         }
 
         orderPanel?.ClosePanel();
-        targetPoint.SetColor(Color.gray);
+        targetPoint.SetColor(Color.orange);
 
         roverVis.onRoverDestroyed = () =>
         {
