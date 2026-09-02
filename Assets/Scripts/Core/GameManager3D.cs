@@ -47,7 +47,7 @@ public class GameManager3D : MonoBehaviour
 
     void Awake()
     {
-        SaveManager.DeleteSave(); // TEMP!!
+        //SaveManager.DeleteSave(); // TEMP
 
         if (!SaveManager.SaveExists())
         {
