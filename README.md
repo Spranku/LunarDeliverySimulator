@@ -51,19 +51,3 @@ Manage a fleet of lunar rovers, choose orders, and deliver supplies across the M
    git clone https://github.com/Spranku/LunarDeliverySimulator.git
 Open in Unity (version 6000.3.10f1 or newer)
 
-Build via File → Build Settings
-
-🗺️ Roadmap
-□ UI responsiveness for all screen resolutions
-□ Additional planets (Mars, Europa)
-□ Visual improvements (effects, skybox)
-□ Sound design
-📜 License
-MIT License — see LICENSE for details.
-
-📧 Contact
-GitHub: Spranku
-
-Itch.io: spranky.itch.io
-
-Built with ❤️ in Unity
