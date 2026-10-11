@@ -623,10 +623,15 @@ public class HUDManager : MonoBehaviour
 
     void ToggleMenu()
     {
-        if (isMenuOpen)
-            CloseMenu();
-        else
-            OpenMenu();
+        //if (isMenuOpen)
+        //    CloseMenu();
+        //else
+        //    OpenMenu();
+
+        CloseAllSubPanels();
+        ShowOverlay();
+
+
     }
 
     void OpenMenu()
