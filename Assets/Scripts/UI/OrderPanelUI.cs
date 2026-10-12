@@ -43,19 +43,6 @@ public class OrderPanelUI : MonoBehaviour
         cameraController = FindFirstObjectByType<CameraController>();
         hudManager = FindFirstObjectByType<HUDManager>();
 
-        if (panel != null)
-        {
-            panelRect = panel.GetComponent<RectTransform>();
-            float width = 350f;
-            if (panelRect != null && panelRect.rect.width > 0)
-                width = panelRect.rect.width;
-
-            closedPos = new Vector2(-width, 0);
-            openPos = Vector2.zero;
-            panelRect.anchoredPosition = closedPos;
-            panel.SetActive(false);
-        }
-
         if (closeButton != null)
             closeButton.onClick.AddListener(ClosePanel);
 
@@ -63,14 +50,6 @@ public class OrderPanelUI : MonoBehaviour
             deliverButton.onClick.AddListener(OnDeliverClicked);
 
         isOpen = false;
-    }
-
-    void Update()
-    {
-        if (isOpen && Input.GetKeyDown(KeyCode.Escape))
-        {
-            ClosePanel();
-        }
     }
 
     public void ShowOrder(OrderData order)
@@ -145,32 +124,20 @@ public class OrderPanelUI : MonoBehaviour
     {
         if (isOpen) return;
         isOpen = true;
-        openTime = Time.time;
 
         if (hudManager != null)
+        {
             hudManager.ShowOverlay();
+        }
 
         if (panel != null)
         {
             panel.SetActive(true);
-            if (panelRect != null)
-            {
-                panelRect.anchoredPosition = closedPos;
-                if (animCoroutine != null) StopCoroutine(animCoroutine);
-                animCoroutine = StartCoroutine(AnimatePanel(closedPos, openPos));
-            }
         }
     }
 
     public void ClosePanel()
     {
-        if (!isOpen) return;
-
-        if (Time.time - openTime < 0.5f)
-        {
-            return;
-        }
-
         isOpen = false;
 
         if (cameraController != null)
@@ -180,46 +147,11 @@ public class OrderPanelUI : MonoBehaviour
             cameraController.isUIActive = false;
         }
 
-        if (panelRect != null)
-        {
-            if (animCoroutine != null) StopCoroutine(animCoroutine);
-            animCoroutine = StartCoroutine(AnimatePanel(panelRect.anchoredPosition, closedPos, true));
-        }
-        else
-        {
-            HidePanelImmediate();
-        }
-    }
-
-    IEnumerator AnimatePanel(Vector2 start, Vector2 end, bool hideOnComplete = false)
-    {
-        float elapsed = 0f;
-
-        while (elapsed < animationDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed / animationDuration;
-            float smoothT = t * t * (3f - 2f * t);
-
-            if (panelRect != null)
-                panelRect.anchoredPosition = Vector2.Lerp(start, end, smoothT);
-
-            yield return null;
-        }
-
-        if (panelRect != null)
-            panelRect.anchoredPosition = end;
-
-        if (hideOnComplete)
-            HidePanelImmediate();
-
-        animCoroutine = null;
+        HidePanelImmediate();
     }
 
     void HidePanelImmediate()
     {
-        Debug.Log("HidePanelImmediate");
-
         if (panel != null)
             panel.SetActive(false);
 
