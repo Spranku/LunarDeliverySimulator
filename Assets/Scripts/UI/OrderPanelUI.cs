@@ -44,7 +44,14 @@ public class OrderPanelUI : MonoBehaviour
         hudManager = FindFirstObjectByType<HUDManager>();
 
         if (closeButton != null)
+        {
             closeButton.onClick.AddListener(ClosePanel);
+
+        }
+        else
+        {
+            Debug.Log("ClosePanel = null");
+        }
 
         if (deliverButton != null)
             deliverButton.onClick.AddListener(OnDeliverClicked);
@@ -138,6 +145,7 @@ public class OrderPanelUI : MonoBehaviour
 
     public void ClosePanel()
     {
+        Debug.Log("ClosePanel");
         isOpen = false;
 
         if (cameraController != null)
@@ -146,6 +154,7 @@ public class OrderPanelUI : MonoBehaviour
                 cameraController.ExitFocusMode();
             cameraController.isUIActive = false;
         }
+
 
         HidePanelImmediate();
     }
