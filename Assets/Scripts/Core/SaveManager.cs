@@ -17,59 +17,65 @@ public class SaveManager : MonoBehaviour
             progress.Rovers.Add(new RoverData("ׂÿדאק", 150f, 100f, 0.7f));
             SaveManager.Save(progress);
         }
+        
     }
 
     private static string SavePath => Path.Combine(Application.persistentDataPath, "lunar_save.json");
 
     public static void Save(GameProgress progress)
     {
-        try
-        {
-            string json = JsonUtility.ToJson(progress, true); // pretty print
-            File.WriteAllText(SavePath, json);
-            Debug.Log($"Game saved to {SavePath}");
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"Failed to save game: {e.Message}");
-        }
+        //try
+        //{
+        //    string json = JsonUtility.ToJson(progress, true); // pretty print
+        //    File.WriteAllText(SavePath, json);
+        //    Debug.Log($"Game saved to {SavePath}");
+        //}
+        //catch (System.Exception e)
+        //{
+        //    Debug.LogError($"Failed to save game: {e.Message}");
+        //}
     }
 
     public static GameProgress Load()
     {
-        try
-        {
-            if (File.Exists(SavePath))
-            {
-                string json = File.ReadAllText(SavePath);
-                GameProgress progress = JsonUtility.FromJson<GameProgress>(json);
-                Debug.Log("Game loaded successfully");
-                return progress;
-            }
-            else
-            {
-                Debug.Log("No save file found, creating new game");
-                return new GameProgress();
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"Failed to load game: {e.Message}");
-            return new GameProgress();
-        }
+        Debug.Log("[TEST] Load skipped, returning new GameProgress");
+        return new GameProgress();
+
+        //try
+        //{
+        //    if (File.Exists(SavePath))
+        //    {
+        //        string json = File.ReadAllText(SavePath);
+        //        GameProgress progress = JsonUtility.FromJson<GameProgress>(json);
+        //        Debug.Log("Game loaded successfully");
+        //        return progress;
+        //    }
+        //    else
+        //    {
+        //        Debug.Log("No save file found, creating new game");
+        //        return new GameProgress();
+        //    }
+        //}
+        //catch (System.Exception e)
+        //{
+        //    Debug.LogError($"Failed to load game: {e.Message}");
+        //    return new GameProgress();
+        //}
+
     }
 
     public static bool SaveExists()
     {
-        return File.Exists(SavePath);
+        //return File.Exists(SavePath);
+        return false;
     }
 
     public static void DeleteSave()
     {
-        if (File.Exists(SavePath))
-        {
-            File.Delete(SavePath);
-            Debug.Log("Save deleted");
-        }
+        //if (File.Exists(SavePath))
+        //{
+        //    File.Delete(SavePath);
+        //    Debug.Log("Save deleted");
+        //}
     }
 }
