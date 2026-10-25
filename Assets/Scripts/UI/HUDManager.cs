@@ -724,10 +724,10 @@ public class HUDManager : MonoBehaviour
 
     void CloseAllSubPanels()
     {
-        if (statsPanel != null) statsPanel.SetActive(false);
-        if (roversStatusPanel != null) roversStatusPanel.SetActive(false);
-        if (ordersPanel != null) ordersPanel.SetActive(false);
-        if (settingsPanel != null) settingsPanel.SetActive(false);
+        if (statsPanel != null && statsPanel.activeSelf) statsPanel.SetActive(false);
+        if (roversStatusPanel != null && roversStatusPanel.activeSelf) roversStatusPanel.SetActive(false);
+        if (ordersPanel != null && ordersPanel.activeSelf) ordersPanel.SetActive(false);
+        if (settingsPanel != null && settingsPanel.activeSelf) settingsPanel.SetActive(false);
 
         if (basePanel != null)
             basePanel.ClosePanel();
